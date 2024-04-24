@@ -1,4 +1,5 @@
-#include "headers.h"
+
+#include "queue.h"
 
 int main(int argc, char *argv[])
 {
@@ -35,14 +36,16 @@ int main(int argc, char *argv[])
     {
         algo = details.algoType;
         quanta = details.quanta; 
-        printf("Message recieved successfully!!!!!!!\n");
+        printf("Message recieved successfully from algo and quanta \n");
         printf("algo type: %d \n", details.algoType);
         printf("quatnta : %d \n", details.quanta);
     }
 
 
 
-    // TODO: Implement scheduler logic
+    // Creating queue
+    Queue *queue;
+    queue = createQueue();
 
     // Receive process objects from the message queue
     while (1)
@@ -54,11 +57,11 @@ int main(int argc, char *argv[])
         }
         else
         {
-            printf("Message recieved successfully!!!!!!!\n");
+            printf("Message recieved successfully from process\n");
             printf("process id: %d \n", message.process.id);
+            enqueue(queue, message.process);
+            printf("queue successfull");
         }
-        // Process the received message
-        Process process = message.process;
         // Implement your scheduling logic here using the received process object
     }
 

@@ -54,11 +54,9 @@ void initClk()
 
 void destroyClk(bool terminateAll)
 {
-    printf("ALOOOOOOOOOOOOOOOOOOOOOO \n");
     shmdt(shmaddr);
     if (terminateAll)
     {
-        printf("HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH \n");
         killpg(getpgrp(), SIGINT);
     }
 }

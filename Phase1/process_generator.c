@@ -3,7 +3,7 @@
 #define MAX_LINE_LENGTH 100
 
 void clearResources(int);
-void read_processes(Process **processes, int *num_processes)
+int read_processes(Process **processes, int *num_processes)
 {
     FILE *file = fopen("processes.txt", "r");
     if (file == NULL)
@@ -71,19 +71,21 @@ void read_processes(Process **processes, int *num_processes)
     }
 
     fclose(file);
+    return num_lines;
 }
 
 int main(int argc, char *argv[])
 {
     signal(SIGINT, clearResources);
     // TODO Initialization
+    int num_lines = 0;
+
     // initialize semaphore
     int semid1 = semget(server_sem_key, 1, IPC_CREAT | 0666);
     if (semid1 == -1)
     {
         perror("semget");
     }
-    
 
     union Semun semun;
 
@@ -108,7 +110,6 @@ int main(int argc, char *argv[])
         exit(-1);
     }
 
-
     key_id2 = ftok("keyfile", 70);
     msgq2_id = msgget(key_id2, 0666 | IPC_CREAT);
     if (msgq2_id == -1)
@@ -127,7 +128,7 @@ int main(int argc, char *argv[])
     Process *processes;
     int num_processes;
 
-    read_processes(&processes, &num_processes);
+    num_lines = read_processes(&processes, &num_processes);
 
     // 2. Ask the user for the chosen scheduling algorithm and its parameters, if there are any.
     int algo;
@@ -139,14 +140,14 @@ int main(int argc, char *argv[])
     {
         printf("Please enter the quanta for the RR algorithm\n");
         scanf("%d", &quanta);
-        details.quanta = quanta; 
+        details.quanta = quanta;
     }
     send_val2 = msgsnd(msgq2_id, &details, sizeof(details) - sizeof(long), !IPC_NOWAIT);
-            if (send_val2== -1)
-            {
-                perror("Error sending message");
-                exit(EXIT_FAILURE);
-            }
+    if (send_val2 == -1)
+    {
+        perror("Error sending message");
+        exit(EXIT_FAILURE);
+    }
     // 3. Initiate and create the scheduler and clock processes.
     int pid = fork();
     if (pid < 0)
@@ -193,12 +194,12 @@ int main(int argc, char *argv[])
     // 5. Create a data structure for processes and provide it with its parameters.
     // 6. Send the information to the scheduler at the appropriate time.
     int processCounter = 0;
-    while (1)
+    while (num_lines > processCounter)
     {
         currentTime = *shmaddr;
         printf("current time: %d \n", currentTime);
         // handle if many processes arrived at the same time
-        if (currentTime == processes[processCounter].arrival_time)
+        if (currentTime >= processes[processCounter].arrival_time)
         {
             printf("in the condition\n");
             // Pass the process object to the message queue
@@ -214,12 +215,11 @@ int main(int argc, char *argv[])
                 printf("message sent\n");
             }
             processCounter++;
-            
         }
-        sleep(1);
+        sleep(0.5);
     }
-    // 7. Clear clock resources
-    destroyClk(true);
+    // 7. wait on scheduler
+    //wait on scheduler
 }
 
 void clearResources(int signum)
