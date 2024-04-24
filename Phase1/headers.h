@@ -114,3 +114,10 @@ struct msgbuff
     long mtype;
     Process process;
 };
+
+struct msgbuff2
+{
+    long mtype;
+    int quanta;
+    int algoType;
+};

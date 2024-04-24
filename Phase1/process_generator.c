@@ -83,6 +83,7 @@ int main(int argc, char *argv[])
     {
         perror("semget");
     }
+    
 
     union Semun semun;
 
@@ -95,22 +96,32 @@ int main(int argc, char *argv[])
 
     // initialize message queue
 
-    key_t key_id;
-    int msgq_id, send_val;
+    key_t key_id1, key_id2;
+    int msgq1_id, send_val1, msgq2_id, send_val2;
 
-    key_id = ftok("keyfile", 65);
-    msgq_id = msgget(key_id, 0666 | IPC_CREAT);
+    key_id1 = ftok("keyfile", 65);
+    msgq1_id = msgget(key_id1, 0666 | IPC_CREAT);
 
-    if (msgq_id == -1)
+    if (msgq1_id == -1)
     {
         perror("Error in create");
         exit(-1);
     }
-    printf("Message Queue ID = %d\n", msgq_id);
+
+
+    key_id2 = ftok("keyfile", 70);
+    msgq2_id = msgget(key_id2, 0666 | IPC_CREAT);
+    if (msgq2_id == -1)
+    {
+        perror("Error in create");
+        exit(-1);
+    }
 
     struct msgbuff message;
+    struct msgbuff2 details;
 
     message.mtype = 7; /* arbitrary value */
+    details.mtype = 10;
 
     // 1. Read the input files.
     Process *processes;
@@ -120,14 +131,22 @@ int main(int argc, char *argv[])
 
     // 2. Ask the user for the chosen scheduling algorithm and its parameters, if there are any.
     int algo;
-    int quanta;
+    int quanta = 0;
     printf("Please enter the desired scheuling algorithm: \n (1) for RR \n (2) for SRTN \n (3) for HPF\n");
     scanf("%d", &algo);
+    details.algoType = algo;
     if (algo == 1)
     {
         printf("Please enter the quanta for the RR algorithm\n");
         scanf("%d", &quanta);
+        details.quanta = quanta; 
     }
+    send_val2 = msgsnd(msgq2_id, &details, sizeof(details) - sizeof(long), !IPC_NOWAIT);
+            if (send_val2== -1)
+            {
+                perror("Error sending message");
+                exit(EXIT_FAILURE);
+            }
     // 3. Initiate and create the scheduler and clock processes.
     int pid = fork();
     if (pid < 0)
@@ -164,6 +183,7 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
     // 4. Use this function after creating the clock process to initialize clock
+    printf("this is the semaphore: %d \n", semid1);
     down(semid1);
     initClk();
     // To get time use this
@@ -173,10 +193,8 @@ int main(int argc, char *argv[])
     // 5. Create a data structure for processes and provide it with its parameters.
     // 6. Send the information to the scheduler at the appropriate time.
     int processCounter = 0;
-    printf("%d \n", processes[processCounter].arrival_time);
     while (1)
     {
-        
         currentTime = *shmaddr;
         printf("current time: %d \n", currentTime);
         // handle if many processes arrived at the same time
@@ -185,8 +203,8 @@ int main(int argc, char *argv[])
             printf("in the condition\n");
             // Pass the process object to the message queue
             message.process = processes[processCounter];
-            send_val = msgsnd(msgq_id, &message, sizeof(message.process) - sizeof(long), !IPC_NOWAIT);
-            if (send_val == -1)
+            send_val1 = msgsnd(msgq1_id, &message, sizeof(message.process) - sizeof(long), !IPC_NOWAIT);
+            if (send_val1 == -1)
             {
                 perror("Error sending message");
                 exit(EXIT_FAILURE);
