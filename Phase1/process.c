@@ -20,8 +20,13 @@ int main(int argc, char * argv[])
     while (remainingtime > 0)
     {
         printf("alooo from process \n");
+        remainingtime--;
         sleep(1);
         // remainingtime = ??;
+    }
+    if(remainingtime==0)
+    {
+        printf("process terminated \n");
     }
     
     destroyClk(false);
