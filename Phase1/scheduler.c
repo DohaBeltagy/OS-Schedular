@@ -118,14 +118,14 @@ if(algo==1)
                         // Parent process
                         printf("Process %d started\n", next_process.id);
                         next_process.isForked = true; // Mark the process as forked
-                        //next_process.processId = getpid();
+                        next_process.display = pid;
                     }
                    
                 }
 
                 else
                 {
-                    kill(next_process.id, SIGCONT);
+                    kill(next_process.display, SIGCONT);
                     printf("Process %d resumed\n", next_process.id);
                 }
 
@@ -141,7 +141,7 @@ if(algo==1)
             if (remaining_quantum == 0)
             {
                 // Quantum has ended, stop the current process and put it at the end of the queue
-                kill(process.processId, SIGSTOP);
+                kill(process.display, SIGSTOP);
                 running_process_id = -1;
                 enqueue(queue, process);
                 printf("Salam\n");

@@ -66,11 +66,11 @@ void destroyClk(bool terminateAll)
 typedef struct
 {
     int id; //id read from the input file 
-    int processId; //id of the process used to stop and resume the process 
     int arrival_time;
     int runtime;
     int priority;
     bool isForked;
+    int display;
 } Process;
 
 union Semun
