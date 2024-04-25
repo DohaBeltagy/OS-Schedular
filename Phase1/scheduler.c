@@ -4,6 +4,23 @@
 
 int main(int argc, char *argv[])
 {
+    key_t key;
+    int msgid;
+    struct msgbuff3 processState;
+
+    // Generate a unique key
+    key = ftok("keyfile", 80);
+    if (key == -1) {
+        perror("ftok");
+        exit(EXIT_FAILURE);
+    }
+
+    // Create or get message queue
+    msgid = msgget(key, 0666 | IPC_CREAT);
+    if (msgid == -1) {
+        perror("msgget");
+        exit(EXIT_FAILURE);
+    }
     initClk();
 
     int msgq1_id, msgq2_id;
@@ -71,6 +88,17 @@ if(algo==1)
     while (1)
     {
         down(semid2);
+        if (msgrcv(msgid, &processState, sizeof(processState), 80, IPC_NOWAIT) == -1)
+        {
+            //perror("msgrcv");
+            //exit(EXIT_FAILURE);
+        }
+        else
+        {
+            running_process_id = -1;
+            //TODO:
+            //Free and delete the process after termination
+        }
         int sem_value;
         if ((sem_value = semctl(semid2, 0, GETVAL)) == -1) {
             perror("Error getting semaphore value");

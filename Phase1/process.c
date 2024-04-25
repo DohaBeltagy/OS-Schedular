@@ -66,17 +66,22 @@ int main(int argc, char * argv[])
         printf("alooo from process \n");
         remainingtime--;
         // remainingtime = ??;
-        up(semid3);
+        if (remainingtime != 0)
+        {
+            up(semid3);
+        }
         sleep(1);
     }
     if(remainingtime==0)
     {
-        processState.mtype = 1; // Message type (can be any positive integer)
+        processState.mtype = 80; // Message type (can be any positive integer)
+        processState.state = 1;
         if (msgsnd(msgid, &processState, sizeof(processState), 0) == -1) {
         perror("msgsnd");
         exit(EXIT_FAILURE);
     }
         printf("process terminated \n");
+        up(semid3);
     }
     
     destroyClk(false);
