@@ -36,10 +36,18 @@ int main(int argc, char * argv[])
         perror("Error in attaching the shm in clock!");
         exit(-1);
     }
+    int semid1 = semget(server_sem_key, 1, IPC_CREAT | 0666);
+    if (semid1 == -1)
+    {
+        perror("semget");
+    }
     *shmaddr = clk; /* initialize shared memory */
+    up(semid1);
     while (1)
     {
-        sleep(1);
+        sleep(0.5);
         (*shmaddr)++;
+        printf("this is the clock: %d \n", *shmaddr);
     }
+    
 }
