@@ -60,9 +60,10 @@ int main(int argc, char *argv[])
             printf("Message recieved successfully from process\n");
             printf("process id: %d \n", message.process.id);
             enqueue(queue, message.process);
-            printf("queue successfull");
+            displayQueue(queue);
         }
         // Implement your scheduling logic here using the received process object
+        sleep(1);
     }
 
     destroyClk(true);

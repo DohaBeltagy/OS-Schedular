@@ -216,7 +216,7 @@ int main(int argc, char *argv[])
             }
             processCounter++;
         }
-        sleep(0.5);
+        sleep(1);
     }
     // 7. wait on scheduler
     //wait on scheduler

@@ -45,7 +45,7 @@ int main(int argc, char * argv[])
     up(semid1);
     while (1)
     {
-        sleep(0.5);
+        sleep(1);
         (*shmaddr)++;
         printf("this is the clock: %d \n", *shmaddr);
     }
