@@ -22,19 +22,24 @@ void down_with_retry(int semid) {
 
 int main(int argc, char * argv[])
 {
-    initClk();
-     
+    key_t key;
+    int msgid;
     struct msgbuff3 processState;
 
-    int msgq3_id;
-    key_t key_id3 = ftok("keyfile", 75);
-    msgq3_id = msgget(key_id3, 0666);
-    if (msgq3_id == -1)
-    {
-        perror("Error getting message queue");
-        //exit(EXIT_FAILURE);
+    key = ftok("keyfile", 80);
+    if (key == -1) {
+        perror("ftok");
+        exit(EXIT_FAILURE);
     }
 
+    msgid = msgget(key, 0666 | IPC_CREAT);
+    if (msgid == -1) {
+        perror("msgget");
+        exit(EXIT_FAILURE);
+    }
+
+    initClk();
+     
     // Convert the runtime argument from string to integer
     int runtime=atoi(argv[1]);
     remainingtime=runtime;
@@ -66,18 +71,11 @@ int main(int argc, char * argv[])
     }
     if(remainingtime==0)
     {
-        processState.mtype = 49;
-        processState.state = 1;
-        int send_val1 = msgsnd(msgq3_id, &processState, sizeof(processState) - sizeof(long), !IPC_NOWAIT);
-        if (send_val1 == -1)
-        {
-            perror("Error sending message");
-            exit(EXIT_FAILURE);
-        }
-        else
-        {
-            printf("message sent\n");
-        }
+        processState.mtype = 1; // Message type (can be any positive integer)
+        if (msgsnd(msgid, &processState, sizeof(processState), 0) == -1) {
+        perror("msgsnd");
+        exit(EXIT_FAILURE);
+    }
         printf("process terminated \n");
     }
     

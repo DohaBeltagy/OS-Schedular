@@ -6,30 +6,17 @@ int main(int argc, char *argv[])
 {
     initClk();
 
-    int msgq1_id, msgq2_id, msgq3_id;
+    int msgq1_id, msgq2_id;
     struct msgbuff message;
     struct msgbuff2 details;
-    struct msgbuff3 processState;
     int algo, quanta;
 
     // Get message queue ID
     key_t key_id = ftok("keyfile", 65);
-    if (key_id == -1) {
-    perror("ftok");
-    exit(EXIT_FAILURE);
-    }
     msgq1_id = msgget(key_id, 0666);
     if (msgq1_id == -1)
     {
         perror("Error getting message queue");
-        exit(EXIT_FAILURE);
-    }
-
-    key_t key_id3 = ftok("keyfile", 75);
-    msgq3_id = msgget(key_id3, 0666);
-    if (msgq3_id == -1)
-    {
-        perror("Error getting message queue in sched.");
         exit(EXIT_FAILURE);
     }
 
@@ -84,21 +71,6 @@ if(algo==1)
     while (1)
     {
         down(semid2);
-        if (msgrcv(msgq3_id, &processState, sizeof(struct msgbuff3) - sizeof(long), 49, IPC_NOWAIT) == -1)
-        {
-            //perror("Error receiving message");
-            //exit(EXIT_FAILURE);
-        }
-        else
-        {
-            if(processState.state == 1)
-            {
-                running_process_id = -1;
-
-                //TODO
-                //We need to delete and free the trapped signal
-            }
-        }
         int sem_value;
         if ((sem_value = semctl(semid2, 0, GETVAL)) == -1) {
             perror("Error getting semaphore value");
@@ -175,7 +147,7 @@ if(algo==1)
             {
                 remaining_quantum--;
             }
-            if (remaining_quantum == 0)
+            else if (remaining_quantum == 0)
             {
                 // Quantum has ended, stop the current process and put it at the end of the queue
                 running_process_id = -1;
