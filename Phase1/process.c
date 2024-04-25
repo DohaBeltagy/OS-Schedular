@@ -66,7 +66,7 @@ int main(int argc, char * argv[])
         printf("alooo from process \n");
         remainingtime--;
         // remainingtime = ??;
-        if (remainingtime != 0)
+        if (remainingtime > 0)
         {
             up(semid3);
         }

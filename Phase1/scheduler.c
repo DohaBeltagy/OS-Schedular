@@ -175,7 +175,7 @@ if(algo==1)
             {
                 remaining_quantum--;
             }
-            else if (remaining_quantum == 0)
+            if (remaining_quantum == 0)
             {
                 // Quantum has ended, stop the current process and put it at the end of the queue
                 running_process_id = -1;
