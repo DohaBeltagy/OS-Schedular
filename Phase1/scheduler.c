@@ -1,6 +1,8 @@
 #include <sys/sem.h>
 #include <errno.h>
 #include "queue.h"
+#include "HPF_queue.h"
+
 
 int main(int argc, char *argv[])
 {
@@ -157,6 +159,74 @@ if(algo==1)
         up(semid3);
     }
 }
+else if (algo ==2) 
+{
+    HPFQueue* queue;
+    queue = createQueue();
+    Process* process;
+    int running_process_id = -1;
+
+    // Receive process objects from the message queue
+    while (1)
+    {
+        down(semid2);
+        int sem_value;
+        if ((sem_value = semctl(semid2, 0, GETVAL)) == -1) {
+            perror("Error getting semaphore value");
+            exit(EXIT_FAILURE);
+        }
+        if (msgrcv(msgq1_id, &message, sizeof(struct msgbuff) - sizeof(long), 7, IPC_NOWAIT) == -1)
+        {
+            //perror("Error receiving message");
+            //exit(EXIT_FAILURE);
+        }
+        else
+        {
+            printf("Message recieved successfully from process\n");
+            printf("process id: %d \n", message.process.id);
+            enqueue(queue, message.process);
+            displayQueue(queue);
+        }
+        //printf("Semaphore value: %d\n", sem_value);
+        if (running_process_id == -1)
+        {
+            // No process is running, try to dequeue from the queue
+            if (!isEmpty(queue))
+            {
+                // Dequeue the next process
+                Process next_process = dequeue(queue);
+
+                // Fork a new process to execute the program
+                pid_t pid = fork();
+                if (pid < 0)
+                {
+                    perror("Fork failed");
+                    exit(EXIT_FAILURE);
+                }
+                else if (pid == 0)
+                {
+                    // Child process
+                    char runtime_str[10];
+                    sprintf(runtime_str, "%d", next_process.runtime);
+                    char *const args[] = {"./process.out", runtime_str, NULL};
+                    execv("./process.out", args);
+                    perror("Execv failed");
+                    exit(EXIT_FAILURE);
+                }
+                else
+                {
+                    // Parent process
+                    printf("Process %d started\n", next_process.id);
+                    next_process.isForked = true; // Mark the process as forked
+                    next_process.display = pid;
+                }
+            }
+            
+        }
+        // Wait for a clock tick
+        up(semid3);
+    }
+}
 
     destroyClk(true);
     //
@@ -166,3 +236,4 @@ if(algo==1)
 
     //
 }
+
