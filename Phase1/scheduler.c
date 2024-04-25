@@ -27,6 +27,8 @@ int main(int argc, char *argv[])
     struct msgbuff message;
     struct msgbuff2 details;
     int algo, quanta;
+    Queue *PCB;
+    createQueue(PCB);
 
     // Get message queue ID
     key_t key_id = ftok("keyfile", 65);

@@ -73,6 +73,9 @@ typedef struct
     int priority;
     bool isForked;
     int display;
+    int exec_time;
+    int state;
+    int waiting_time;
 } Process;
 
 union Semun
