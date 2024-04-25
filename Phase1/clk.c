@@ -5,6 +5,7 @@
  * It is not a real part of operating system!
  */
 
+#include <sys/sem.h>
 #include "headers.h"
 
 int shmid;
@@ -20,6 +21,35 @@ void cleanup(int signum)
 /* This file represents the system clock for ease of calculations */
 int main(int argc, char * argv[])
 {
+
+    int semid2 = semget(sem_2_key, 1, IPC_CREAT | 0666);
+    if (semid2 == -1)
+    {
+        perror("semget");
+    }
+
+    union Semun semun;
+
+    semun.val = 0; /* initial value of the semaphore, Binary semaphore */
+    if (semctl(semid2, 0, SETVAL, semun) == -1)
+    {
+        perror("Error in semctl");
+        exit(-1);
+    }
+
+    int semid3 = semget(sem_3_key, 1, IPC_CREAT | 0666);
+    if (semid3 == -1)
+    {
+        perror("semget");
+    }
+
+    semun.val = 1; /* initial value of the semaphore, Binary semaphore */
+    if (semctl(semid3, 0, SETVAL, semun) == -1)
+    {
+        perror("Error in semctl");
+        exit(-1);
+    }
+
     printf("Clock starting\n");
     signal(SIGINT, cleanup);
     int clk = 0;
@@ -45,9 +75,17 @@ int main(int argc, char * argv[])
     up(semid1);
     while (1)
     {
-        sleep(0.5);
+        down(semid3);
+        sleep(1);
         (*shmaddr)++;
         printf("this is the clock: %d \n", *shmaddr);
+        up(semid2);
+        int sem_value;
+        if ((sem_value = semctl(semid2, 0, GETVAL)) == -1) {
+            perror("Error getting semaphore value");
+            exit(EXIT_FAILURE);
+        }
+
+        //printf("Semaphore2 value: %d\n", sem_value);
     }
-    
 }

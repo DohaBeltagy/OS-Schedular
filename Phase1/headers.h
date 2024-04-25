@@ -15,6 +15,8 @@ typedef short bool;
 #define true 1
 #define false 0
 #define server_sem_key 5
+#define sem_2_key 6
+#define sem_3_key 7
 #define SHKEY 300
 
 ///==============================
@@ -67,6 +69,7 @@ typedef struct
     int arrival_time;
     int runtime;
     int priority;
+    bool isForked;
 } Process;
 
 union Semun

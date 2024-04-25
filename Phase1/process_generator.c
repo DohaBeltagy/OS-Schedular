@@ -196,6 +196,7 @@ int main(int argc, char *argv[])
     int processCounter = 0;
     while (num_lines > processCounter)
     {
+        //down(semid2);
         currentTime = *shmaddr;
         printf("current time: %d \n", currentTime);
         // handle if many processes arrived at the same time
@@ -216,7 +217,7 @@ int main(int argc, char *argv[])
             }
             processCounter++;
         }
-        sleep(0.5);
+        sleep(1);
     }
     // 7. wait on scheduler
     //wait on scheduler
