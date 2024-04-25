@@ -6,17 +6,30 @@ int main(int argc, char *argv[])
 {
     initClk();
 
-    int msgq1_id, msgq2_id;
+    int msgq1_id, msgq2_id, msgq3_id;
     struct msgbuff message;
     struct msgbuff2 details;
+    struct msgbuff3 processState;
     int algo, quanta;
 
     // Get message queue ID
     key_t key_id = ftok("keyfile", 65);
+    if (key_id == -1) {
+    perror("ftok");
+    exit(EXIT_FAILURE);
+    }
     msgq1_id = msgget(key_id, 0666);
     if (msgq1_id == -1)
     {
         perror("Error getting message queue");
+        exit(EXIT_FAILURE);
+    }
+
+    key_t key_id3 = ftok("keyfile", 75);
+    msgq3_id = msgget(key_id3, 0666);
+    if (msgq3_id == -1)
+    {
+        perror("Error getting message queue in sched.");
         exit(EXIT_FAILURE);
     }
 
@@ -28,6 +41,11 @@ int main(int argc, char *argv[])
 
     int semid3 = semget(sem_3_key, 1, IPC_CREAT | 0666);
     if (semid3 == -1)
+    {
+        perror("semget");
+    }
+    int semid4 = semget(sem_4_key, 1, IPC_CREAT | 0666);
+    if (semid4 == -1)
     {
         perror("semget");
     }
@@ -66,6 +84,21 @@ if(algo==1)
     while (1)
     {
         down(semid2);
+        if (msgrcv(msgq3_id, &processState, sizeof(struct msgbuff3) - sizeof(long), 49, IPC_NOWAIT) == -1)
+        {
+            //perror("Error receiving message");
+            //exit(EXIT_FAILURE);
+        }
+        else
+        {
+            if(processState.state == 1)
+            {
+                running_process_id = -1;
+
+                //TODO
+                //We need to delete and free the trapped signal
+            }
+        }
         int sem_value;
         if ((sem_value = semctl(semid2, 0, GETVAL)) == -1) {
             perror("Error getting semaphore value");
@@ -138,23 +171,41 @@ if(algo==1)
         else
         {
             // There is a process running
+            if (remaining_quantum > 0)
+            {
+                remaining_quantum--;
+            }
             if (remaining_quantum == 0)
             {
                 // Quantum has ended, stop the current process and put it at the end of the queue
-                kill(process.display, SIGSTOP);
                 running_process_id = -1;
                 enqueue(queue, process);
+                kill(process.display, SIGSTOP);
                 printf("Salam\n");
-            }
-            else
-            {
-                // Quantum has not ended, decrement remaining quantum
-                remaining_quantum--;
+                up(semid3);
             }
         }
-        printf("remaining quanta %d\n", remaining_quantum);
         // Wait for a clock tick
-        up(semid3);
+        printf("is there a process running ?: %d\n", running_process_id);
+        if (running_process_id == -1)
+        {
+            int sem_value;
+            if ((sem_value = semctl(semid2, 0, GETVAL)) == -1) {
+                perror("Error getting semaphore value");
+                exit(EXIT_FAILURE);
+            }
+            if (sem_value == 0);
+            {
+                printf("to Clk\n");
+                up(semid3);
+            }
+        }
+        else
+        {
+            printf("error?\n");
+            up(semid4);
+        }
+        sleep(1);
     }
 }
 
