@@ -1,0 +1,9 @@
+{
+    "files.associations": {
+        "msg.h": "c",
+        "sem.h": "c",
+        "signal.h": "c",
+        "ipc.h": "c",
+        "queue.h": "c"
+    }
+}

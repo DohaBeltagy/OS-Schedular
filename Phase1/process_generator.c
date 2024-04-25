@@ -196,6 +196,7 @@ int main(int argc, char *argv[])
     int processCounter = 0;
     while (num_lines > processCounter)
     {
+        //down(semid2);
         currentTime = *shmaddr;
         printf("current time: %d \n", currentTime);
         // handle if many processes arrived at the same time

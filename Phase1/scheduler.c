@@ -1,4 +1,5 @@
-
+#include <sys/sem.h>
+#include <errno.h>
 #include "queue.h"
 
 int main(int argc, char *argv[])
@@ -17,6 +18,18 @@ int main(int argc, char *argv[])
     {
         perror("Error getting message queue");
         exit(EXIT_FAILURE);
+    }
+
+    int semid2 = semget(sem_2_key, 1, IPC_CREAT | 0666);
+    if (semid2 == -1)
+    {
+        perror("semget");
+    }
+
+    int semid3 = semget(sem_3_key, 1, IPC_CREAT | 0666);
+    if (semid3 == -1)
+    {
+        perror("semget");
     }
 
     key_t key_id2 = ftok("keyfile", 70);
@@ -46,13 +59,22 @@ int main(int argc, char *argv[])
     queue = createQueue();
     int remaining_quantum = quanta;
     int running_process_id = -1;
+    Process process;
+
     // Receive process objects from the message queue
     while (1)
     {
-        if (msgrcv(msgq1_id, &message, sizeof(struct msgbuff) - sizeof(long), 7, !IPC_NOWAIT) == -1)
-        {
-            perror("Error receiving message");
+        //printf("hi\n");
+        down(semid2);
+        int sem_value;
+        if ((sem_value = semctl(semid2, 0, GETVAL)) == -1) {
+            perror("Error getting semaphore value");
             exit(EXIT_FAILURE);
+        }
+        if (msgrcv(msgq1_id, &message, sizeof(struct msgbuff) - sizeof(long), 7, IPC_NOWAIT) == -1)
+        {
+            //perror("Error receiving message");
+            //exit(EXIT_FAILURE);
         }
         else
         {
@@ -61,7 +83,7 @@ int main(int argc, char *argv[])
             enqueue(queue, message.process);
             displayQueue(queue);
         }
-   
+        //printf("Semaphore value: %d\n", sem_value);
         if (running_process_id == -1)
         {
             // No process is running, try to dequeue from the queue
@@ -69,6 +91,7 @@ int main(int argc, char *argv[])
             {
                 // Dequeue the next process
                 Process next_process = dequeue(queue);
+
                 
                 // Check if the process has already been forked
                 if (!next_process.isForked)
@@ -95,7 +118,7 @@ int main(int argc, char *argv[])
                         // Parent process
                         printf("Process %d started\n", next_process.id);
                         next_process.isForked = true; // Mark the process as forked
-                        next_process.id = pid;
+                        //next_process.id = pid;
                     }
                    
                 }
@@ -108,6 +131,7 @@ int main(int argc, char *argv[])
 
                 running_process_id = next_process.id;
                 remaining_quantum = quanta; // Reset quantum for new process
+                process = next_process;
             }
             
         }
@@ -119,7 +143,8 @@ int main(int argc, char *argv[])
                 // Quantum has ended, stop the current process and put it at the end of the queue
                 kill(running_process_id, SIGSTOP);
                 running_process_id = -1;
-                
+                enqueue(queue, process);
+                printf("Salam\n");
             }
             else
             {
@@ -127,9 +152,9 @@ int main(int argc, char *argv[])
                 remaining_quantum--;
             }
         }
-        printf("remaining quanta %d", remaining_quantum);
+        printf("remaining quanta %d\n", remaining_quantum);
         // Wait for a clock tick
-      
+        up(semid3);
     }
 
     destroyClk(true);
