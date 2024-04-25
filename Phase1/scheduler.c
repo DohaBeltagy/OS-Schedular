@@ -53,7 +53,8 @@ int main(int argc, char *argv[])
         printf("algo type: %d \n", details.algoType);
         printf("quatnta : %d \n", details.quanta);
     }
-
+if(algo==1)
+{
     // Creating queue
     Queue *queue;
     queue = createQueue();
@@ -64,7 +65,6 @@ int main(int argc, char *argv[])
     // Receive process objects from the message queue
     while (1)
     {
-        //printf("hi\n");
         down(semid2);
         int sem_value;
         if ((sem_value = semctl(semid2, 0, GETVAL)) == -1) {
@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
                         // Parent process
                         printf("Process %d started\n", next_process.id);
                         next_process.isForked = true; // Mark the process as forked
-                        //next_process.id = pid;
+                        //next_process.processId = getpid();
                     }
                    
                 }
@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
             if (remaining_quantum == 0)
             {
                 // Quantum has ended, stop the current process and put it at the end of the queue
-                kill(running_process_id, SIGSTOP);
+                kill(process.processId, SIGSTOP);
                 running_process_id = -1;
                 enqueue(queue, process);
                 printf("Salam\n");
@@ -156,6 +156,7 @@ int main(int argc, char *argv[])
         // Wait for a clock tick
         up(semid3);
     }
+}
 
     destroyClk(true);
     //
