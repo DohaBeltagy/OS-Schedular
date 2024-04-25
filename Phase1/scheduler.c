@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
         perror("Error in create");
         exit(-1);
     }
-    //receive message holding the algo type and the quanta of the rr
+    // receive message holding the algo type and the quanta of the rr
     if (msgrcv(msgq2_id, &details, sizeof(struct msgbuff2) - sizeof(long), 10, !IPC_NOWAIT) == -1)
     {
         perror("Error receiving message");
@@ -35,18 +35,17 @@ int main(int argc, char *argv[])
     else
     {
         algo = details.algoType;
-        quanta = details.quanta; 
+        quanta = details.quanta;
         printf("Message recieved successfully from algo and quanta \n");
         printf("algo type: %d \n", details.algoType);
         printf("quatnta : %d \n", details.quanta);
     }
 
-
-
     // Creating queue
     Queue *queue;
     queue = createQueue();
-
+    int remaining_quantum = quanta;
+    int running_process_id = -1;
     // Receive process objects from the message queue
     while (1)
     {
@@ -62,8 +61,75 @@ int main(int argc, char *argv[])
             enqueue(queue, message.process);
             displayQueue(queue);
         }
-        // Implement your scheduling logic here using the received process object
-        sleep(1);
+   
+        if (running_process_id == -1)
+        {
+            // No process is running, try to dequeue from the queue
+            if (!isEmpty(queue))
+            {
+                // Dequeue the next process
+                Process next_process = dequeue(queue);
+                
+                // Check if the process has already been forked
+                if (!next_process.isForked)
+                {
+                    // Fork a new process to execute the program
+                    pid_t pid = fork();
+                    if (pid < 0)
+                    {
+                        perror("Fork failed");
+                        exit(EXIT_FAILURE);
+                    }
+                    else if (pid == 0)
+                    {
+                        // Child process
+                        char runtime_str[10];
+                        sprintf(runtime_str, "%d", next_process.runtime);
+                        char *const args[] = {"./process.out", runtime_str, NULL};
+                        execv("./process.out", args);
+                        perror("Execv failed");
+                        exit(EXIT_FAILURE);
+                    }
+                    else
+                    {
+                        // Parent process
+                        printf("Process %d started\n", next_process.id);
+                        next_process.isForked = true; // Mark the process as forked
+                        next_process.id = pid;
+                    }
+                   
+                }
+
+                else
+                {
+                    kill(next_process.id, SIGCONT);
+                    printf("Process %d resumed\n", next_process.id);
+                }
+
+                running_process_id = next_process.id;
+                remaining_quantum = quanta; // Reset quantum for new process
+            }
+            
+        }
+        else
+        {
+            // There is a process running
+            if (remaining_quantum == 0)
+            {
+                // Quantum has ended, stop the current process and put it at the end of the queue
+                kill(running_process_id, SIGSTOP);
+                running_process_id = -1;
+                
+            }
+            else
+            {
+                // Quantum has not ended, decrement remaining quantum
+                remaining_quantum--;
+            }
+        }
+        printf("remaining quanta %d", remaining_quantum);
+        // Wait for a clock tick
+      
     }
 
     destroyClk(true);

@@ -67,6 +67,7 @@ typedef struct
     int arrival_time;
     int runtime;
     int priority;
+    bool isForked;
 } Process;
 
 union Semun
