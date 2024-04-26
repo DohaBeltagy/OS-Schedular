@@ -64,6 +64,13 @@ void destroyClk(bool terminateAll)
     }
 }
 
+typedef struct 
+{
+    int rem_time;
+    int state;
+    int waiting_time;   
+} PCB;
+
 typedef struct
 {
     int id; //id read from the input file 
@@ -73,9 +80,7 @@ typedef struct
     int priority;
     bool isForked;
     int display;
-    int exec_time;
-    int state;
-    int waiting_time;
+    PCB pcb;
 } Process;
 
 union Semun
@@ -133,4 +138,9 @@ struct msgbuff3
 {
     long mtype;
     int state;
+};
+
+struct remMsgbuff{
+    long mtype;
+    int remaining_time;
 };

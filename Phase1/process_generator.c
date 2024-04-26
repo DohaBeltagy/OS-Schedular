@@ -205,7 +205,7 @@ int main(int argc, char *argv[])
             printf("in the condition\n");
             // Pass the process object to the message queue
             message.process = processes[processCounter];
-            send_val1 = msgsnd(msgq1_id, &message, sizeof(message.process) - sizeof(long), !IPC_NOWAIT);
+            send_val1 = msgsnd(msgq1_id, &message, sizeof(message), !IPC_NOWAIT);
             if (send_val1 == -1)
             {
                 perror("Error sending message");
