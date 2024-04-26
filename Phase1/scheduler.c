@@ -92,6 +92,7 @@ int main(int argc, char *argv[])
         printf("algo type: %d \n", details.algoType);
         printf("quatnta : %d \n", details.quanta);
     }
+    // Round Robin
     if (algo == 1)
     {
         // Creating queue
@@ -239,6 +240,98 @@ int main(int argc, char *argv[])
             printf("is there a process running ?: %d\n", running_process_id);
             up(semid3);
             sleep(1);
+        }
+    }
+    // HPF 
+    else if (algo == 3) 
+    {
+        // Creating queue
+        HPFQueue *queue;
+        queue = createHPFQueue();
+        int running_process_id = -1;
+        Process process;
+
+        // Receive process objects from the message queue
+        while (1)
+        {
+            down(semid2);
+            if (msgrcv(msgid, &processState, sizeof(processState), 80, IPC_NOWAIT) == -1)
+            {
+                // perror("msgrcv");
+                // exit(EXIT_FAILURE);
+            }
+            else
+            {
+                running_process_id = -1;
+                // TODO:
+                // Free and delete the process after termination
+            }
+            int sem_value;
+            if ((sem_value = semctl(semid2, 0, GETVAL)) == -1)
+            {
+                perror("Error getting semaphore value");
+                exit(EXIT_FAILURE);
+            }
+            if (msgrcv(msgq1_id, &message, sizeof(struct msgbuff), 7, IPC_NOWAIT) == -1)
+            {
+                // perror("Error receiving message");
+                // exit(EXIT_FAILURE);
+            }
+            else
+            {
+                printf("Message recieved successfully from process\n");
+                printf("process id: %d \n", message.process.id);
+                message.process.pcb.state = 0;
+                message.process.pcb.waiting_time = 0;
+                HPFenqueue(queue, message.process);
+                displayHPFQueue(queue);
+            }
+            // printf("Semaphore value: %d\n", sem_value);
+            if (running_process_id == -1)
+            {
+                // No process is running, try to dequeue from the queue
+                if (!isHPFEmpty(queue))
+                {
+                    // Dequeue the next process
+                    Process next_process = HPFdequeue(queue);
+
+                    // Fork a new process to execute the program
+                    pid_t pid = fork();
+                    if (pid < 0)
+                    {
+                        perror("Fork failed");
+                        exit(EXIT_FAILURE);
+                    }
+                    else if (pid == 0)
+                    {
+                        // Child process
+                        char *const args[] = {"./process.out", NULL};
+                        execv("./process.out", args);
+                        perror("Execv failed");
+                        exit(EXIT_FAILURE);
+                    }
+                    else
+                    {
+                        // Parent process
+                        remMsg.remaining_time = next_process.runtime;
+                        remMsg.mtype = 36;
+                        if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
+                        {
+                            perror("msgsnd");
+                            exit(EXIT_FAILURE);
+                        }
+                        else
+                        {
+                            printf("Message sent successfuuly;\n");
+                        }
+                        printf("Process %d started\n", next_process.id);
+                        next_process.isForked = true; // Mark the process as forked
+                        next_process.display = pid;
+                    }
+                     running_process_id = next_process.id;
+                     process = next_process;
+                }   
+            }
         }
     }
 

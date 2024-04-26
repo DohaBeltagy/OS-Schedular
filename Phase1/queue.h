@@ -1,12 +1,9 @@
+#ifndef QUEUE_H 
+#define QUEUE_H
+
 #include "stdio.h"
 #include "stdlib.h"
 #include "headers.h"
-
-// Define the structure for a node in the queue
-typedef struct Node {
-    Process data;
-    struct Node* next;
-} Node;
 
 // Define the structure for the queue
 typedef struct {
@@ -84,3 +81,5 @@ void freeQueue(Queue* queue) {
     }
     free(queue);
 }
+
+#endif  

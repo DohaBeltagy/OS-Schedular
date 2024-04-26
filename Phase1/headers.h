@@ -1,3 +1,6 @@
+#ifndef HEADERS_H 
+#define HEADERS_H
+
 #include <stdio.h> //if you don't use scanf/printf change this include
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -144,3 +147,11 @@ struct remMsgbuff{
     long mtype;
     int remaining_time;
 };
+
+// Define the structure for a node in the queue
+typedef struct Node {
+    Process data;
+    struct Node* next;
+} Node;
+
+#endif  

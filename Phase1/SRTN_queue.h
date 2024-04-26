@@ -2,11 +2,6 @@
 #include "stdlib.h"
 #include "headers.h"
 
-// Define the structure for a node in the queue
-typedef struct Node {
-    Process data;
-    struct Node* next;
-} Node;
 
 // Define the structure for the queue
 typedef struct {
@@ -15,7 +10,7 @@ typedef struct {
 } SRTNQueue;
 
 // Function to create a new node
-Node* createNode(Process data) {
+Node* createSRTNNode(Process data) {
     Node* newNode = (Node*)malloc(sizeof(Node));
     if (newNode == NULL) {
         fprintf(stderr, "Memory allocation failed\n");
@@ -27,7 +22,7 @@ Node* createNode(Process data) {
 }
 
 // Function to initialize a queue
-SRTNQueue* createQueue() {
+SRTNQueue* createSRTNQueue() {
     SRTNQueue* queue = (SRTNQueue*)malloc(sizeof(SRTNQueue));
     if (queue == NULL) {
         fprintf(stderr, "Memory allocation failed\n");
@@ -38,21 +33,21 @@ SRTNQueue* createQueue() {
 }
 
 // Function to check if the queue is empty
-int isEmpty(SRTNQueue* queue) {
+int isSRTNEmpty(SRTNQueue* queue) {
     return queue->front == NULL;
 }
 
 // Function to enqueue a process
-void enqueue(SRTNQueue* queue, Process data) {
+void SRTNenqueue(SRTNQueue* queue, Process data) {
     Node* newNode = createNode(data);
-    if (isEmpty(queue)) {
+    if (isSRTNEmpty(queue)) {
         queue->front = queue->rear = newNode;
     } 
     else 
     {
         Node* prev_ptr = nullptr;
         Node* curr_ptr = queue->front;
-        while(newNode->data. > curr_ptr->data.priority)
+        while(newNode->data.pcb.rem_time > curr_ptr->data.pcb.rem_time)
         {
             prev_ptr = curr_ptr;
             curr_ptr= curr_ptr->next;
@@ -67,8 +62,8 @@ void enqueue(SRTNQueue* queue, Process data) {
 }
 
 // Function to dequeue a process
-Process dequeue(SRTNQueue* queue) {
-    if (isEmpty(queue)) {
+Process SRTNdequeue(SRTNQueue* queue) {
+    if (SRTNisEmpty(queue)) {
         fprintf(stderr, "Queue is empty\n");
         exit(EXIT_FAILURE);
     }
@@ -80,7 +75,7 @@ Process dequeue(SRTNQueue* queue) {
 }
 
 // Function to display the contents of the queue (for testing purposes)
-void displayQueue(SRTNQueue* queue) {
+void displaySRTNQueue(SRTNQueue* queue) {
     Node* current = queue->front;
     printf("Queue: ");
     while (current != NULL) {
@@ -91,7 +86,7 @@ void displayQueue(SRTNQueue* queue) {
 }
 
 // Function to free memory allocated to the queue
-void freeQueue(SRTNQueue* queue) {
+void freeSRTNQueue(SRTNQueue* queue) {
     while (!isEmpty(queue)) {
         dequeue(queue);
     }
