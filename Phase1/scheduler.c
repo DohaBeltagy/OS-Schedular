@@ -46,7 +46,9 @@ int main(int argc, char *argv[])
     int msgq1_id, msgq2_id;
     struct msgbuff message;
     struct msgbuff2 details;
-    int algo, quanta;
+    int algo, quanta, processNum;
+    Queue *finished;
+    finished = createQueue();
     Queue *PCB;
     createQueue(PCB);
 
@@ -88,9 +90,11 @@ int main(int argc, char *argv[])
     {
         algo = details.algoType;
         quanta = details.quanta;
+        processNum = details.processesNum;
         printf("Message recieved successfully from algo and quanta \n");
         printf("algo type: %d \n", details.algoType);
         printf("quatnta : %d \n", details.quanta);
+        printf("Number of processes equals : %d \n", details.processesNum);
     }
     // Round Robin
     if (algo == 1)
@@ -101,9 +105,10 @@ int main(int argc, char *argv[])
         int remaining_quantum = quanta;
         int running_process_id = -1;
         Process process;
+        int finishedProcesses=0;
 
         // Receive process objects from the message queue
-        while (1)
+        while (finishedProcesses<processNum)
         {
             down(semid2);
             if (msgrcv(msgid, &processState, sizeof(processState), 80, IPC_NOWAIT) == -1)
@@ -114,8 +119,10 @@ int main(int argc, char *argv[])
             else
             {
                 running_process_id = -1;
-                // TODO:
-                // Free and delete the process after termination
+                finishedProcesses++;
+                printf("This is finish queue: \n");
+                enqueue(finished, process);
+                displayQueue(finished);
             }
             int sem_value;
             if ((sem_value = semctl(semid2, 0, GETVAL)) == -1)
@@ -137,7 +144,6 @@ int main(int argc, char *argv[])
                 enqueue(queue, message.process);
                 displayQueue(queue);
             }
-            // printf("Semaphore value: %d\n", sem_value);
             if (running_process_id == -1)
             {
                 // No process is running, try to dequeue from the queue
@@ -187,8 +193,10 @@ int main(int argc, char *argv[])
 
                     else
                     {
+                        printf("Process %d resumed\n", next_process.id);
                         kill(next_process.display, SIGCONT);
-                        remMsg.remaining_time = process.pcb.rem_time;
+                        printf("NEXT PROCESS REM TIME IS: %d\n", next_process.pcb.rem_time);
+                        remMsg.remaining_time = next_process.pcb.rem_time;
                         remMsg.mtype = 36;
                         if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
                         {
@@ -199,7 +207,6 @@ int main(int argc, char *argv[])
                         {
                             printf("Message sent from scheduler\n");
                         }
-                        printf("Process %d resumed\n", next_process.id);
                     }
 
                     running_process_id = next_process.id;
@@ -214,7 +221,6 @@ int main(int argc, char *argv[])
                 {
                     remaining_quantum--;
                     process.pcb.rem_time--;
-                    printf("REM time is NOWWWW %d \n",process.pcb.rem_time);
                     remMsg.remaining_time = process.pcb.rem_time;
                     remMsg.mtype = 36;
                     if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
@@ -227,7 +233,7 @@ int main(int argc, char *argv[])
                         printf("Message sent from scheduler\n");
                     }
                 }
-                if (remaining_quantum == 0)
+                else if (remaining_quantum == 0)
                 {
                     // Quantum has ended, stop the current process and put it at the end of the queue
                     running_process_id = -1;
@@ -336,11 +342,6 @@ int main(int argc, char *argv[])
     }
 
     destroyClk(true);
-    //
-
-    // //TODO implement the scheduler :)
-    // //upon termination release the clock resources.
-
-    //
+   
 }
 

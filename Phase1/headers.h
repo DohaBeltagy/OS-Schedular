@@ -63,7 +63,7 @@ void destroyClk(bool terminateAll)
     shmdt(shmaddr);
     if (terminateAll)
     {
-        killpg(getpgrp(), SIGINT);
+        killpg(getpgrp(), SIGKILL);
     }
 }
 
@@ -135,6 +135,7 @@ struct msgbuff2
     long mtype;
     int quanta;
     int algoType;
+    int processesNum;
 };
 
 struct msgbuff3
