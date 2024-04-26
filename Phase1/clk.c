@@ -50,20 +50,6 @@ int main(int argc, char * argv[])
         exit(-1);
     }
 
-    int semid4 = semget(sem_4_key, 1, IPC_CREAT | 0666);
-    if (semid4 == -1)
-    {
-        perror("semget");
-    }
-
-    semun.val = 0; /* initial value of the semaphore, Binary semaphore */
-    if (semctl(semid4, 0, SETVAL, semun) == -1)
-    {
-        perror("Error in semctl");
-        exit(-1);
-    }
-
-
     printf("Clock starting\n");
     signal(SIGINT, cleanup);
     int clk = 0;

@@ -205,6 +205,11 @@ int main(int argc, char *argv[])
             printf("in the condition\n");
             // Pass the process object to the message queue
             message.process = processes[processCounter];
+            message.process.pcb.remaining_time = message.process.runtime;
+            message.process.pcb.state = 0;
+            message.process.pcb.terminated_time = -1;
+            message.process.pcb.waiting_time = -1;
+
             send_val1 = msgsnd(msgq1_id, &message, sizeof(message.process) - sizeof(long), !IPC_NOWAIT);
             if (send_val1 == -1)
             {
