@@ -17,6 +17,7 @@ typedef short bool;
 #define server_sem_key 5
 #define sem_2_key 6
 #define sem_3_key 7
+#define sem_4_key 8
 #define SHKEY 300
 
 ///==============================
@@ -63,14 +64,23 @@ void destroyClk(bool terminateAll)
     }
 }
 
+typedef struct 
+{
+    int rem_time;
+    int state;
+    int waiting_time;   
+} PCB;
+
 typedef struct
 {
     int id; //id read from the input file 
+    int remaining_time;
     int arrival_time;
     int runtime;
     int priority;
     bool isForked;
     int display;
+    PCB pcb;
 } Process;
 
 union Semun
@@ -92,7 +102,7 @@ void down(int sem)
     if (semop(sem, &op, 1) == -1)
     {
         perror("Error in down()");
-        exit(-1);
+        //exit(-1);
     }
 }
 
@@ -122,4 +132,15 @@ struct msgbuff2
     long mtype;
     int quanta;
     int algoType;
+};
+
+struct msgbuff3
+{
+    long mtype;
+    int state;
+};
+
+struct remMsgbuff{
+    long mtype;
+    int remaining_time;
 };

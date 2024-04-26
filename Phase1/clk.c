@@ -50,6 +50,7 @@ int main(int argc, char * argv[])
         exit(-1);
     }
 
+
     printf("Clock starting\n");
     signal(SIGINT, cleanup);
     int clk = 0;
@@ -85,7 +86,6 @@ int main(int argc, char * argv[])
             perror("Error getting semaphore value");
             exit(EXIT_FAILURE);
         }
-
         //printf("Semaphore2 value: %d\n", sem_value);
     }
 }
