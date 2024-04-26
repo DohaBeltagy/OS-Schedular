@@ -77,6 +77,8 @@ int read_processes(Process **processes, int *num_processes)
 
 int main(int argc, char *argv[])
 {
+    int scheduler;
+
     signal(SIGINT, clearResources);
     // TODO Initialization
     int num_lines = 0;
@@ -134,9 +136,11 @@ int main(int argc, char *argv[])
     // 2. Ask the user for the chosen scheduling algorithm and its parameters, if there are any.
     int algo;
     int quanta = 0;
+
     printf("Please enter the desired scheuling algorithm: \n (1) for RR \n (2) for SRTN \n (3) for HPF\n");
     scanf("%d", &algo);
     details.algoType = algo;
+    details.processesNum=num_lines;
     if (algo == 1)
     {
         printf("Please enter the quanta for the RR algorithm\n");
@@ -184,6 +188,10 @@ int main(int argc, char *argv[])
         perror("Execv failed");
         exit(EXIT_FAILURE);
     }
+    else
+    {
+        scheduler=pid2;
+    }
     // 4. Use this function after creating the clock process to initialize clock
     printf("this is the semaphore: %d \n", semid1);
     down(semid1);
@@ -222,6 +230,7 @@ int main(int argc, char *argv[])
     }
     // 7. wait on scheduler
     //wait on scheduler
+    waitpid(scheduler, NULL, 0);
 }
 
 void clearResources(int signum)

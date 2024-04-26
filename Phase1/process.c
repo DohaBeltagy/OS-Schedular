@@ -40,7 +40,6 @@ int main(int argc, char *argv[])
     }
 
     initClk();
-    printf("ALOOOOOOoo from process\n");
 
     // Convert the runtime argument from string to integer
 
@@ -48,13 +47,12 @@ int main(int argc, char *argv[])
 
     if (msgrcv(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 36, !IPC_NOWAIT) == -1)
     {
-        printf("ALOOOOOOOOOOOO FROM ERROR IN REC\n");
         perror("Error receiving message");
         exit(EXIT_FAILURE);
     }
     else
     {
-        printf("received the remaining time from the scheduler OUT: %d\n", remMsg.remaining_time);
+        printf("///////received the remaining time from the scheduler OUT: %d//////////\n", remMsg.remaining_time);
         remainingtime = remMsg.remaining_time;
     }
     while (remainingtime > 0)
@@ -66,12 +64,12 @@ int main(int argc, char *argv[])
         }
         else
         {
-            printf("received the remaining time from the scheduler IN: %d\n", remMsg.remaining_time);
+            printf("/////////received the remaining time from the scheduler IN: %d///////////\n", remMsg.remaining_time);
             remainingtime = remMsg.remaining_time;
         }
-        //sleep(1);
+        sleep(1);
     }
-    if (remainingtime == 0)
+    if (remainingtime <= 0)
     {
         processState.mtype = 80; // Message type (can be any positive integer)
         processState.state = 1;
