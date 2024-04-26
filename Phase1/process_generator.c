@@ -48,6 +48,7 @@ int read_processes(Process **processes, int *num_processes)
 
         Process process;
         int fields_read = sscanf(line, "%d\t%d\t%d\t%d", &process.id, &process.arrival_time, &process.runtime, &process.priority);
+        process.pcb.rem_time=process.runtime;
         if (fields_read != 4)
         {
             fprintf(stderr, "Invalid line format: %s\n", line);

@@ -129,11 +129,8 @@ int main(int argc, char *argv[])
             {
                 printf("Message recieved successfully from process\n");
                 printf("process id: %d \n", message.process.id);
-                message.process.pcb.rem_time = message.process.runtime;
                 message.process.pcb.state = 0;
                 message.process.pcb.waiting_time = 0;
-                printf("RUNTIME???? %d\n", message.process.runtime);
-                printf("the process.pcb.rem: %d\n", process.pcb.rem_time);
                 enqueue(queue, message.process);
                 displayQueue(queue);
             }
@@ -214,6 +211,7 @@ int main(int argc, char *argv[])
                 {
                     remaining_quantum--;
                     process.pcb.rem_time--;
+                    printf("REM time is NOWWWW %d \n",process.pcb.rem_time);
                     remMsg.remaining_time = process.pcb.rem_time;
                     remMsg.mtype = 36;
                     if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
