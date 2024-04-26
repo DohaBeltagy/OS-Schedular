@@ -48,7 +48,7 @@ void SRTNenqueue(SRTNQueue* queue, Process data) {
     } 
     else 
     {
-        Node* prev_ptr = nullptr;
+        Node* prev_ptr = NULL;
         Node* curr_ptr = queue->front;
         while(newNode->data.pcb.rem_time > curr_ptr->data.pcb.rem_time)
         {
@@ -57,7 +57,7 @@ void SRTNenqueue(SRTNQueue* queue, Process data) {
         }
         newNode = prev_ptr->next;
         newNode->next = curr_ptr;
-        if (curr_ptr == nullptr) 
+        if (curr_ptr == NULL) 
         {
             queue->rear = newNode;
         }

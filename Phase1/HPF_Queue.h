@@ -101,4 +101,8 @@ void freeHPFQueue(HPFQueue* queue) {
     free(queue);
 }
 
+Process getHPFHead (HPFQueue* queue) {
+    return queue->front->data;
+}
+
 #endif
