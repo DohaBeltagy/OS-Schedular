@@ -27,8 +27,8 @@ int main(int argc, char *argv[])
     struct msgbuff message;
     struct msgbuff2 details;
     int algo, quanta;
-    Queue *PCB;
-    createQueue(PCB);
+    Queue *finished;
+    finished = createQueue();
 
     // Get message queue ID
     key_t key_id = ftok("keyfile", 65);
@@ -98,6 +98,9 @@ if(algo==1)
         else
         {
             running_process_id = -1;
+            printf("This is finish queue: \n");
+            enqueue(finished, process);
+            displayQueue(finished);
             //TODO:
             //Free and delete the process after termination
         }
