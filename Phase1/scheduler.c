@@ -380,7 +380,6 @@ int main(int argc, char *argv[])
                     running_process = next_process;
                     running_process_id = next_process.id;
                     SRTNdequeue(queue);
-                    next_process = getSRTNHead(queue);
                     pid_t pid = fork();
                     if (pid < 0)
                     {

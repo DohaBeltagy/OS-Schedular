@@ -43,23 +43,48 @@ int isSRTNEmpty(SRTNQueue* queue) {
 // Function to enqueue a process
 void SRTNenqueue(SRTNQueue* queue, Process data) {
     Node* newNode = createSRTNNode(data);
-    if (isSRTNEmpty(queue)) {
+    if (isSRTNEmpty(queue)) 
+    {
         queue->front = queue->rear = newNode;
     } 
     else 
-    {
-        Node* prev_ptr = NULL;
+    {   Node* prev_ptr = NULL;
         Node* curr_ptr = queue->front;
-        while(newNode->data.pcb.rem_time > curr_ptr->data.pcb.rem_time)
+        if (queue-> front == queue-> rear && queue->front != NULL)
         {
-            prev_ptr = curr_ptr;
-            curr_ptr= curr_ptr->next;
+            if (newNode->data.pcb.rem_time < curr_ptr->data.pcb.rem_time)
+            {
+                queue-> front = newNode;
+                newNode-> next = curr_ptr;
+                queue-> rear = curr_ptr;
+            }
+            else 
+            {
+                curr_ptr -> next = newNode;
+                queue-> rear = newNode;
+            }
         }
-        newNode = prev_ptr->next;
-        newNode->next = curr_ptr;
-        if (curr_ptr == NULL) 
+        else 
         {
-            queue->rear = newNode;
+            while(newNode->data.pcb.rem_time > curr_ptr->data.pcb.rem_time)
+            {
+                prev_ptr = curr_ptr;
+                curr_ptr= curr_ptr->next;
+            }
+            newNode -> next = curr_ptr;
+            if(prev_ptr != NULL)
+            {
+                prev_ptr->next = newNode;
+            }
+            else 
+            {
+                queue->front = newNode ;
+            }
+            
+            if (curr_ptr == NULL) 
+            {
+                queue->rear = newNode;
+            }
         }
     }
 }
