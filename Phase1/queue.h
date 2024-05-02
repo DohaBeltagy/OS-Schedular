@@ -52,14 +52,38 @@ void enqueue(Queue* queue, Process data) {
 // Function to dequeue a process
 Process dequeue(Queue* queue) {
     if (isEmpty(queue)) {
-        fprintf(stderr, "Queue is empty\n");
-        exit(EXIT_FAILURE);
+        printf("Queue is empty\n");
+        //exit(EXIT_FAILURE);
     }
     Node* temp = queue->front;
     Process data = temp->data;
     queue->front = queue->front->next;
     free(temp);
     return data;
+}
+
+Process traverse(Queue* queue, int i) {
+    if (isEmpty(queue)) {
+        printf("Queue is empty\n");
+        //exit(EXIT_FAILURE);
+    }
+    if (i == 0)
+    {
+        return queue->front->data;
+    }
+    else
+    {
+        int target = 1;
+        Node* temp = queue->front;
+        while(target <= i)
+        {
+            temp = temp->next;
+            if (target == i)
+            {
+                return temp->data;
+            }
+        }
+    }
 }
 
 // Function to display the contents of the queue (for testing purposes)
