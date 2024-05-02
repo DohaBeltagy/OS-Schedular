@@ -96,4 +96,8 @@ void freeSRTNQueue(SRTNQueue* queue) {
     free(queue);
 }
 
+Process getSRTNHead (SRTNQueue* queue) {
+    return queue->front->data;
+}
+
 #endif

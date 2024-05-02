@@ -55,16 +55,41 @@ void HPFenqueue(HPFQueue* queue, Process data) {
     else 
     {   Node* prev_ptr = NULL;
         Node* curr_ptr = queue->front;
-        while(newNode->data.priority > curr_ptr->data.priority)
+        if (queue-> front == queue-> rear && queue->front != NULL)
         {
-            prev_ptr = curr_ptr;
-            curr_ptr= curr_ptr->next;
+            if (newNode->data.priority < curr_ptr->data.priority)
+            {
+                queue-> front = newNode;
+                newNode-> next = curr_ptr;
+                queue-> rear = curr_ptr;
+            }
+            else 
+            {
+                curr_ptr -> next = newNode;
+                queue-> rear = newNode;
+            }
         }
-        newNode = prev_ptr->next;
-        newNode->next = curr_ptr;
-        if (curr_ptr == NULL) 
+        else 
         {
-            queue->rear = newNode;
+            while(newNode->data.priority > curr_ptr->data.priority)
+            {
+                prev_ptr = curr_ptr;
+                curr_ptr= curr_ptr->next;
+            }
+            newNode -> next = curr_ptr;
+            if(prev_ptr != NULL)
+            {
+                prev_ptr->next = newNode;
+            }
+            else 
+            {
+                queue->front = newNode ;
+            }
+            
+            if (curr_ptr == NULL) 
+            {
+                queue->rear = newNode;
+            }
         }
     }
 }
