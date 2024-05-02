@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
     if (msgrcv(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 36, !IPC_NOWAIT) == -1)
     {
         perror("Error receiving message");
-        exit(EXIT_FAILURE);
+        //exit(EXIT_FAILURE);
     }
     else
     {
@@ -60,26 +60,27 @@ int main(int argc, char *argv[])
         if (msgrcv(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 36, !IPC_NOWAIT) == -1)
         {
             perror("Error receiving message");
-            exit(EXIT_FAILURE);
+            //exit(EXIT_FAILURE);
         }
         else
         {
             printf("/////////received the remaining time from the scheduler IN: %d///////////\n", remMsg.remaining_time);
             remainingtime = remMsg.remaining_time;
+            if (remainingtime == 0)
+            {
+                break;
+            }
         }
-        sleep(1);
     }
-    if (remainingtime <= 0)
+
+    processState.mtype = 80; // Message type (can be any positive integer)
+    processState.state = 1;
+    if (msgsnd(msgid, &processState, sizeof(processState), 0) == -1)
     {
-        processState.mtype = 80; // Message type (can be any positive integer)
-        processState.state = 1;
-        if (msgsnd(msgid, &processState, sizeof(processState), 0) == -1)
-        {
-            perror("msgsnd");
-            exit(EXIT_FAILURE);
-        }
-        printf("process terminated \n");
+        perror("msgsnd");
+        //exit(EXIT_FAILURE);
     }
+    printf("process terminated \n");
 
     destroyClk(false);
 

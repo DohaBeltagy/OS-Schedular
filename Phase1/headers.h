@@ -70,6 +70,7 @@ typedef struct
     int rem_time;
     int state;
     int waiting_time;   
+    int finish_time;
 } PCB;
 
 typedef struct
