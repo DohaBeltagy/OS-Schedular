@@ -78,7 +78,7 @@ typedef struct
     int id; //id read from the input file 
     int remaining_time;
     int arrival_time;
-    int runtime;
+    float runtime;
     int priority;
     bool isForked;
     int display;

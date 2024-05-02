@@ -3,9 +3,21 @@
 #include "queue.h"
 #include "HPF_Queue.h"
 #include "SRTN_queue.h"
+#include <signal.h>
+
+FILE *perf_file;
+
+void handle_signal(int signal) {
+    if (perf_file != NULL) {
+        fclose(perf_file);
+    }
+    exit(signal);
+}
 
 int main(int argc, char *argv[])
 {
+    signal(SIGINT, handle_signal);
+    signal(SIGTERM, handle_signal);
     key_t key, remKey;
     int msgid, msgid2;
     struct msgbuff3 processState;
@@ -200,7 +212,8 @@ int main(int argc, char *argv[])
                             next_process.isForked = true; // Mark the process as forked
                             next_process.display = pid;
                             //print state at process start in file
-                            fprintf(file, "At time %d Process %d started arr %d total %d remain %d wait %d\n", getClk(), next_process.id, next_process.arrival_time, next_process.runtime, next_process.pcb.rem_time, next_process.pcb.waiting_time);
+                            int total = process.runtime;
+                            fprintf(file, "At time %d Process %d started arr %d total %d remain %d wait %d\n", getClk(), next_process.id, next_process.arrival_time, total, next_process.pcb.rem_time, next_process.pcb.waiting_time);
                             fflush(file);
                         }
                     }
@@ -208,7 +221,8 @@ int main(int argc, char *argv[])
                     {
                         printf("Process %d resumed\n", next_process.id);
                         //print process resumed state in file
-                        fprintf(file, "At time %d Process %d resumed arr %d total %d remain %d wait %d\n", getClk(), next_process.id, next_process.arrival_time, next_process.runtime, next_process.pcb.rem_time, next_process.pcb.waiting_time);
+                        int total = process.runtime;
+                        fprintf(file, "At time %d Process %d resumed arr %d total %d remain %d wait %d\n", getClk(), next_process.id, next_process.arrival_time, total, next_process.pcb.rem_time, next_process.pcb.waiting_time);
                         fflush(file);
                         kill(next_process.display, SIGCONT);
                         printf("NEXT PROCESS REM TIME IS: %d\n", next_process.pcb.rem_time);
@@ -273,7 +287,8 @@ int main(int argc, char *argv[])
                     rdy_processCount++;
                     printf("Process %d stopped\n", process.id);
                     //print process stopped state in file
-                    fprintf(file, "At time %d Process %d stopped arr %d total %d remain %d wait %d\n", getClk(), process.id, process.arrival_time, process.runtime, process.pcb.rem_time, process.pcb.waiting_time);
+                    int total = process.runtime;
+                    fprintf(file, "At time %d Process %d stopped arr %d total %d remain %d wait %d\n", getClk(), process.id, process.arrival_time, total, process.pcb.rem_time, process.pcb.waiting_time);
                 }
                 sleep(2);
             }
@@ -289,8 +304,10 @@ int main(int argc, char *argv[])
                 running_process_id = -1;
                 finishedProcesses++;
                 process.pcb.finish_time = getClk();
+                printf("Finish Time = %d", process.pcb.finish_time);
                 //print state at termination in file
-                fprintf(file, "At time %d Process %d finished arr %d total %d remain %d wait %d\n", getClk(), process.id, process.arrival_time, process.runtime, process.pcb.rem_time, process.pcb.waiting_time);
+                int total = process.runtime;
+                fprintf(file, "At time %d Process %d finished arr %d total %d remain %d wait %d\n", getClk(), process.id, process.arrival_time, total, process.pcb.rem_time, process.pcb.waiting_time);
                 fflush(file);
                 printf("This is finish queue: \n");
                 enqueue(finished, process);
@@ -498,35 +515,44 @@ int main(int argc, char *argv[])
     }
     fclose(file);
     //creates perf file
-    FILE *perf_file = fopen("perf.txt", "w");
+    perf_file = fopen("perf.txt", "w");
     if (file == NULL) {
         perror("Error opening file");
         exit(EXIT_FAILURE);
     }
     //Calc cpu utilization
-    float cpuUti = (idleTime / totalTime) * 100;
+    float cpuUti = ((totalTime - idleTime) / totalTime) * 100;
     //print cpu utilization to file
+    //printf("Yo\n");
     fprintf(perf_file, "CPU utilization = %f %%\n", cpuUti);
     fflush(perf_file);
     float totalWTA = 0;
-    int totalWT = 0;
+    float totalWT = 0;
     //Calc total WTA and WT
-    for (int i = 0; i < total_procesCount; i++)
+    for (int i = 0; i < details.processesNum; i++)
     {
         Process processCalc = dequeue(finished);
+        if(processCalc.runtime == 0)
+        {
+            continue;
+        }
+        printf("WTA %d: %f\n", i, (processCalc.pcb.finish_time - processCalc.arrival_time) / processCalc.runtime);
         totalWTA += (processCalc.pcb.finish_time - processCalc.arrival_time) / processCalc.runtime;
+        printf("WT %d: \n", processCalc.pcb.waiting_time);
         totalWT += processCalc.pcb.waiting_time;
         enqueue(finished, processCalc);
     }
 
     //Calc avg. weighted turnaround time
-    float avg_WTA = totalWTA / total_procesCount;
+    float avg_WTA = totalWTA / details.processesNum;
+    printf("This is Avg WTA = %f\n", avg_WTA);
     //prints avg weighted turnaround time in file
     fprintf(perf_file, "Avg WTA = %f\n", avg_WTA);
     fflush(perf_file);
     //Calc avg. waiting time
-    float avg_WT = totalWT / total_procesCount;
+    float avg_WT = totalWT / details.processesNum;
     //Prints avg. waiting time in file
+    printf("This is avg waiting = %f\n", avg_WT);
     fprintf(perf_file, "Avg Waiting = %f\n", avg_WT);
     fflush(perf_file);
     fclose(perf_file);
