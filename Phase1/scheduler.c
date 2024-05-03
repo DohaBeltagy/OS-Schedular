@@ -808,7 +808,7 @@ int main(int argc, char *argv[])
                     printf("Process %d started\n", running_process.id);
                     rdy_processCount--;
                     int total = running_process.runtime;
-                    fprintf(file, "At time %d Process %d started arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, next_process.pcb.waiting_time);
+                    fprintf(file, "At time %d Process %d started arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, running_process.pcb.waiting_time);
                     fflush(file);
                     pid_t pid = fork();
                     if (pid < 0)
@@ -876,7 +876,7 @@ int main(int argc, char *argv[])
                     running_process.isForked = true;
                     printf("Process %d started\n", running_process.id);
                     int total = running_process.runtime;
-                    fprintf(file, "At time %d Process %d started arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, next_process.pcb.waiting_time);
+                    fprintf(file, "At time %d Process %d started arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, running_process.pcb.waiting_time);
                     fflush(file);
                     pid_t pid = fork();
                     if (pid < 0)
