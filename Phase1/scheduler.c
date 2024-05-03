@@ -4,6 +4,7 @@
 #include "HPF_Queue.h"
 #include "SRTN_queue.h"
 #include <signal.h>
+#include <math.h>
 
 FILE *perf_file;
 
@@ -153,7 +154,7 @@ int main(int argc, char *argv[])
                 printf("Message recieved successfully from process generator\n");
                 printf("process id: %d \n", message.process.id);
                 message.process.pcb.state = 0;
-                message.process.pcb.waiting_time = 0;
+                message.process.pcb.waiting_time = 1;
                 enqueue(queue, message.process);
                 displayQueue(queue);
                 rdy_processCount++;
@@ -211,7 +212,7 @@ int main(int argc, char *argv[])
                             next_process.isForked = true; // Mark the process as forked
                             next_process.display = pid;   // Set the process's pid to its actual pid
                             // print state at process start in file
-        
+
                             int total = next_process.runtime;
                             fprintf(file, "At time %d Process %d started arr %d total %d remain %d wait %d\n", getClk(), next_process.id, next_process.arrival_time, total, next_process.pcb.rem_time, next_process.pcb.waiting_time);
                             fflush(file);
@@ -221,7 +222,7 @@ int main(int argc, char *argv[])
                     else
                     {
                         printf("Process %d resumed\n", next_process.id);
-                        //print process resumed state in file
+                        // print process resumed state in file
                         int total = next_process.runtime;
                         fprintf(file, "At time %d Process %d resumed arr %d total %d remain %d wait %d\n", getClk(), next_process.id, next_process.arrival_time, total, next_process.pcb.rem_time, next_process.pcb.waiting_time);
                         fflush(file);
@@ -295,7 +296,7 @@ int main(int argc, char *argv[])
             }
             // Wait for a clock tick
             sleep(1);
-            //message queue to recieve notification from process upon termination
+            // message queue to recieve notification from process upon termination
             if (msgrcv(msgid, &processState, sizeof(processState), 80, IPC_NOWAIT) == -1)
             {
                 // perror("msgrcv");
@@ -308,7 +309,17 @@ int main(int argc, char *argv[])
                 printf("Finish Time = %d", process.pcb.finish_time);
                 // print state at termination in file
                 int total = process.runtime;
-                fprintf(file, "At time %d Process %d finished arr %d total %d remain %d wait %d\n", getClk(), process.id, process.arrival_time, total, process.pcb.rem_time, process.pcb.waiting_time);
+                int TA = process.pcb.finish_time - process.arrival_time;
+                float WTA;
+                if (process.runtime == 0)
+                {
+                    WTA = 0;
+                }
+                else
+                {
+                    WTA = TA / process.runtime;
+                }
+                fprintf(file, "At time %d Process %d finished arr %d total %d remain %d wait %d TA %d WTA %0.2f\n", getClk(), process.id, process.arrival_time, total, process.pcb.rem_time, process.pcb.waiting_time, TA, WTA);
                 fflush(file);
                 printf("This is finish queue: \n");
                 enqueue(finished, process);
@@ -328,7 +339,7 @@ int main(int argc, char *argv[])
         queue = createSRTNQueue();
         int running_process_id = -1;
         Process running_process;
-        Process next_process ;
+        Process next_process;
         running_process.isForked = false;
         next_process.isForked - false;
 
@@ -346,9 +357,19 @@ int main(int argc, char *argv[])
                 finishedProcesses++;
                 running_process.pcb.finish_time = getClk();
                 printf("Finish Time = %d", running_process.pcb.finish_time);
-                //print state at termination in file
+                // print state at termination in file
                 int total = running_process.runtime;
-                fprintf(file, "At time %d Process %d finished arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, running_process.pcb.waiting_time);
+                int TA = running_process.pcb.finish_time - running_process.arrival_time;
+                float WTA;
+                if (running_process.runtime == 0)
+                {
+                    WTA = 0;
+                }
+                else
+                {
+                    WTA = TA / running_process.runtime;
+                }
+                fprintf(file, "At time %d Process %d finished arr %d total %d remain %d wait %d TA %d WTA %f\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, running_process.pcb.waiting_time, TA, WTA);
                 fflush(file);
                 printf("This is finish queue: \n");
                 enqueue(finished, running_process);
@@ -379,8 +400,8 @@ int main(int argc, char *argv[])
                             SRTNenqueue(queue, processCalc);
                         }
                     }
-                    //decrement the remaining time and check termination 
-                    running_process.pcb.rem_time --;
+                    // decrement the remaining time and check termination
+                    running_process.pcb.rem_time--;
                     remMsg.remaining_time = running_process.pcb.rem_time;
                     remMsg.mtype = 36;
                     if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
@@ -401,7 +422,7 @@ int main(int argc, char *argv[])
                     running_process = next_process;
                     running_process_id = next_process.id;
                     SRTNdequeue(queue);
-                    rdy_processCount --;
+                    rdy_processCount--;
                     if (running_process.isForked == false)
                     {
                         running_process.isForked = true;
@@ -410,14 +431,14 @@ int main(int argc, char *argv[])
                         fprintf(file, "At time %d Process %d started arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, running_process.pcb.waiting_time);
                         fflush(file);
                     }
-                    else 
+                    else
                     {
                         int total = running_process.runtime;
                         fprintf(file, "At time %d Process %d resumed arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, running_process.pcb.waiting_time);
                         fflush(file);
                     }
-                    
-                    //check if the ready queue is not empty , increment the waiting time of each
+
+                    // check if the ready queue is not empty , increment the waiting time of each
                     if (!isSRTNEmpty(queue))
                     {
                         printf("I entered here\n");
@@ -462,6 +483,7 @@ int main(int argc, char *argv[])
                         }
                         printf("Process %d started\n", running_process.id);
                     }
+                    idleTime++;
                 }
                 // perror("Error receiving message");
                 // exit(EXIT_FAILURE);
@@ -489,7 +511,7 @@ int main(int argc, char *argv[])
                     if (pid < 0)
                     {
                         perror("Fork failed");
-                        exit(EXIT_FAILURE);
+                        // exit(EXIT_FAILURE);
                     }
                     else if (pid == 0)
                     {
@@ -497,7 +519,7 @@ int main(int argc, char *argv[])
                         char *const args[] = {"./process.out", NULL};
                         execv("./process.out", args);
                         perror("Execv failed");
-                        exit(EXIT_FAILURE);
+                        // exit(EXIT_FAILURE);
                     }
                     else
                     {
@@ -507,7 +529,7 @@ int main(int argc, char *argv[])
                         if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
                         {
                             perror("msgsnd");
-                            exit(EXIT_FAILURE);
+                            // exit(EXIT_FAILURE);
                         }
                         else
                         {
@@ -515,16 +537,21 @@ int main(int argc, char *argv[])
                         }
                         printf("Process %d started\n", running_process.id);
                     }
+                    idleTime++;
                 }
                 // if there was a running process and the incoming process has less remaining time than that of the running process
-                else if ( running_process_id != 1 && running_process.pcb.rem_time > message.process.pcb.rem_time)
-                {   
-                    next_process = getSRTNHead(queue);
+                else if (running_process_id != 1 && running_process.pcb.rem_time > message.process.pcb.rem_time)
+                {
+
+                    printf("STEP 1\n");
                     SRTNenqueue(queue, running_process);
+                    printf("STEP 2\n");
                     rdy_processCount++;
                     kill(running_process.display, SIGSTOP);
+                    printf("STEP 3\n");
                     int total = running_process.runtime;
                     fprintf(file, "At time %d Process %d stopped arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, running_process.pcb.waiting_time);
+                    printf("STEP 4\n");
                     running_process = message.process;
                     running_process_id = message.process.id;
                     if (running_process.isForked = false)
@@ -535,13 +562,13 @@ int main(int argc, char *argv[])
                         fprintf(file, "At time %d Process %d started arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, next_process.pcb.waiting_time);
                         fflush(file);
                     }
-                    else 
+                    else
                     {
                         int total = running_process.runtime;
                         fprintf(file, "At time %d Process %d resumed arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, running_process.pcb.waiting_time);
                         fflush(file);
                     }
-                    //check if the ready queue is not empty , increment the waiting time of each
+                    // check if the ready queue is not empty , increment the waiting time of each
                     if (!isSRTNEmpty(queue))
                     {
                         printf("I entered here\n");
@@ -554,11 +581,12 @@ int main(int argc, char *argv[])
                         }
                     }
                     // Fork a new process to execute the program
+                    next_process = getSRTNHead(queue);
                     pid_t pid = fork();
                     if (pid < 0)
                     {
                         perror("Fork failed");
-                        exit(EXIT_FAILURE);
+                        // exit(EXIT_FAILURE);
                     }
                     else if (pid == 0)
                     {
@@ -566,7 +594,7 @@ int main(int argc, char *argv[])
                         char *const args[] = {"./process.out", NULL};
                         execv("./process.out", args);
                         perror("Execv failed");
-                        exit(EXIT_FAILURE);
+                        // exit(EXIT_FAILURE);
                     }
                     else
                     {
@@ -576,7 +604,7 @@ int main(int argc, char *argv[])
                         if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
                         {
                             perror("msgsnd");
-                            exit(EXIT_FAILURE);
+                            // exit(EXIT_FAILURE);
                         }
                         else
                         {
@@ -587,12 +615,12 @@ int main(int argc, char *argv[])
                     displaySRTNQueue(queue);
                 }
                 // if there is no running process and the remaining time of the incoming process is higher than that of the next process in the queue
-                else if (running_process_id == -1 && getSRTNHead(queue).pcb.rem_time < message.process.pcb.rem_time) 
+                else if (running_process_id == -1 && getSRTNHead(queue).pcb.rem_time < message.process.pcb.rem_time)
                 {
                     running_process = getSRTNHead(queue);
                     running_process_id = running_process.id;
                     SRTNdequeue(queue);
-                    SRTNenqueue(queue,message.process);
+                    SRTNenqueue(queue, message.process);
                     if (running_process.isForked == false)
                     {
                         running_process.isForked = true;
@@ -601,13 +629,13 @@ int main(int argc, char *argv[])
                         fprintf(file, "At time %d Process %d started arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, running_process.pcb.waiting_time);
                         fflush(file);
                     }
-                    else 
+                    else
                     {
                         int total = running_process.runtime;
                         fprintf(file, "At time %d Process %d resumed arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, running_process.pcb.waiting_time);
                         fflush(file);
                     }
-                    //check if the ready queue is not empty , increment the waiting time of each
+                    // check if the ready queue is not empty , increment the waiting time of each
                     if (!isSRTNEmpty(queue))
                     {
                         printf("I entered here\n");
@@ -624,7 +652,7 @@ int main(int argc, char *argv[])
                     if (pid < 0)
                     {
                         perror("Fork failed");
-                        exit(EXIT_FAILURE);
+                        // exit(EXIT_FAILURE);
                     }
                     else if (pid == 0)
                     {
@@ -632,7 +660,7 @@ int main(int argc, char *argv[])
                         char *const args[] = {"./process.out", NULL};
                         execv("./process.out", args);
                         perror("Execv failed");
-                        exit(EXIT_FAILURE);
+                        // exit(EXIT_FAILURE);
                     }
                     else
                     {
@@ -642,7 +670,7 @@ int main(int argc, char *argv[])
                         if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
                         {
                             perror("msgsnd");
-                            exit(EXIT_FAILURE);
+                            // exit(EXIT_FAILURE);
                         }
                         else
                         {
@@ -651,10 +679,11 @@ int main(int argc, char *argv[])
                         printf("Process %d started\n", running_process.id);
                     }
                     displaySRTNQueue(queue);
+                    idleTime++;
                 }
                 else
                 {
-                    //check if the ready queue is not empty , increment the waiting time of each
+                    // check if the ready queue is not empty , increment the waiting time of each
                     if (!isSRTNEmpty(queue))
                     {
                         printf("I entered here\n");
@@ -666,14 +695,14 @@ int main(int argc, char *argv[])
                             SRTNenqueue(queue, processCalc);
                         }
                     }
-                    //decrement the remaining time and check termination 
-                    running_process.pcb.rem_time --;
+                    // decrement the remaining time and check termination
+                    running_process.pcb.rem_time--;
                     remMsg.remaining_time = running_process.pcb.rem_time;
                     remMsg.mtype = 36;
                     if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
                     {
                         perror("msgsnd");
-                        exit(EXIT_FAILURE);
+                        // exit(EXIT_FAILURE);
                     }
                     else
                     {
@@ -684,6 +713,7 @@ int main(int argc, char *argv[])
                     displaySRTNQueue(queue);
                 }
             }
+            totalTime++;
             up(semid3);
             sleep(1);
         }
@@ -711,9 +741,19 @@ int main(int argc, char *argv[])
                 finishedProcesses++;
                 running_process.pcb.finish_time = getClk();
                 printf("Finish Time = %d", running_process.pcb.finish_time);
-                //print state at termination in file
+                // print state at termination in file
                 int total = running_process.runtime;
-                fprintf(file, "At time %d Process %d finished arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, running_process.pcb.waiting_time);
+                int TA = running_process.pcb.finish_time - running_process.arrival_time;
+                float WTA;
+                if (running_process.runtime == 0)
+                {
+                    WTA = 0;
+                }
+                else
+                {
+                    WTA = TA / running_process.runtime;
+                }
+                fprintf(file, "At time %d Process %d finished arr %d total %d remain %d wait %d TA %d WTA %f\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, running_process.pcb.waiting_time, TA, WTA);
                 fflush(file);
                 printf("This is finish queue: \n");
                 enqueue(finished, running_process);
@@ -743,8 +783,8 @@ int main(int argc, char *argv[])
                             HPFenqueue(queue, processCalc);
                         }
                     }
-                    //decrement the remaining time and check termination 
-                    running_process.pcb.rem_time --;
+                    // decrement the remaining time and check termination
+                    running_process.pcb.rem_time--;
                     remMsg.remaining_time = running_process.pcb.rem_time;
                     remMsg.mtype = 36;
                     if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
@@ -754,7 +794,7 @@ int main(int argc, char *argv[])
                     }
                     else
                     {
-                        printf("Message sent successfuuly;\n");
+                        printf("Message sent successfuly;\n");
                     }
                 }
                 // if there was no running process and the ready queue wasn't empty
@@ -815,9 +855,8 @@ int main(int argc, char *argv[])
                         }
                         printf("Process %d started\n", running_process.id);
                     }
+                    idleTime++;
                 }
-                // perror("Error receiving message");
-                // exit(EXIT_FAILURE);
             }
             else // there was a process received at this second
             {
@@ -881,10 +920,11 @@ int main(int argc, char *argv[])
                         }
                         printf("Process %d started\n", running_process.id);
                     }
+                    idleTime++;
                 }
                 else // there is a running process
                 {
-                    // enqueue the incoming process in the ready queue and decrement the remaining time of the running process 
+                    // enqueue the incoming process in the ready queue and decrement the remaining time of the running process
                     HPFenqueue(queue, message.process);
                     rdy_processCount++;
                     displayHPFQueue(queue);
@@ -901,7 +941,8 @@ int main(int argc, char *argv[])
                         printf("Message sent successfuuly;\n");
                     }
                 }
-            }    
+            }
+            totalTime++;
             up(semid3);
             sleep(1);
         }
@@ -917,8 +958,7 @@ int main(int argc, char *argv[])
     // Calc cpu utilization
     float cpuUti = ((totalTime - idleTime) / totalTime) * 100;
     // print cpu utilization to file
-    // printf("Yo\n");
-    fprintf(perf_file, "CPU utilization = %f %%\n", cpuUti);
+    fprintf(perf_file, "CPU utilization = %0.4f %%\n", cpuUti);
     fflush(perf_file);
     float totalWTA = 0;
     float totalWT = 0;
@@ -939,17 +979,32 @@ int main(int argc, char *argv[])
 
     // Calc avg. weighted turnaround time
     float avg_WTA = totalWTA / details.processesNum;
-    printf("This is Avg WTA = %f\n", avg_WTA);
+    printf("This is Avg WTA = %0.4f\n", avg_WTA);
+    float sum = 0;
+    for (int i = 0; i < details.processesNum; i++)
+    {
+        Process processCalc = dequeue(finished);
+        float temp1 = (processCalc.pcb.finish_time - processCalc.arrival_time) / processCalc.runtime;
+        float temp2 = pow(temp1 - avg_WTA, 2);
+        sum += temp2;
+        enqueue(finished, processCalc);
+    }
+    float variance = sum / details.processesNum;
+    float StdDev = sqrt(variance);
+
     // prints avg weighted turnaround time in file
-    fprintf(perf_file, "Avg WTA = %f\n", avg_WTA);
+    fprintf(perf_file, "Avg WTA = %0.4f\n", avg_WTA);
     fflush(perf_file);
     // Calc avg. waiting time
     float avg_WT = totalWT / details.processesNum;
     // Prints avg. waiting time in file
-    printf("This is avg waiting = %f\n", avg_WT);
-    fprintf(perf_file, "Avg Waiting = %f\n", avg_WT);
+    printf("This is avg waiting = %0.4f\n", avg_WT);
+    fprintf(perf_file, "Avg Waiting = %0.4f\n", avg_WT);
     fflush(perf_file);
-    fclose(perf_file);
+    printf("STDWTA %f\n", StdDev);
+    fprintf(perf_file, "Std WTA = %0.4f\n", StdDev);
+    fflush(perf_file);
+    // fclose(perf_file);
 
     // TODO: Implement standard deviation
     destroyClk(true);

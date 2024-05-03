@@ -48,7 +48,7 @@ int read_processes(Process **processes, int *num_processes)
 
         Process process;
         int fields_read = sscanf(line, "%d\t%d\t%f\t%d", &process.id, &process.arrival_time, &process.runtime, &process.priority);
-        process.pcb.rem_time=process.runtime;
+        process.pcb.rem_time = process.runtime;
         process.pcb.waiting_time = 0;
         process.isForked = false;
         if (fields_read != 4)
@@ -82,6 +82,7 @@ int main(int argc, char *argv[])
     int scheduler;
 
     signal(SIGINT, clearResources);
+    signal(SIGTERM, clearResources);
     // TODO Initialization
     int num_lines = 0;
 
@@ -142,7 +143,7 @@ int main(int argc, char *argv[])
     printf("Please enter the desired scheuling algorithm: \n (1) for RR \n (2) for SRTN \n (3) for HPF\n");
     scanf("%d", &algo);
     details.algoType = algo;
-    details.processesNum=num_lines;
+    details.processesNum = num_lines;
     if (algo == 1)
     {
         printf("Please enter the quanta for the RR algorithm\n");
@@ -192,7 +193,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-        scheduler=pid2;
+        scheduler = pid2;
     }
     // 4. Use this function after creating the clock process to initialize clock
     printf("this is the semaphore: %d \n", semid1);
@@ -207,7 +208,7 @@ int main(int argc, char *argv[])
     int processCounter = 0;
     while (num_lines > processCounter)
     {
-        //down(semid2);
+        // down(semid2);
         currentTime = *shmaddr;
         printf("current time: %d \n", currentTime);
         // handle if many processes arrived at the same time
@@ -239,5 +240,26 @@ int main(int argc, char *argv[])
 void clearResources(int signum)
 {
     // TODO Clears all resources in case of interruption
-    
+
+    //========================================DELETING THE MESSAGE QUEUES============================================//
+    key_t key_id = ftok("keyfile", 65);
+    int msgq1_id = msgget(key_id, 0666);
+    msgctl(msgq1_id, IPC_RMID, NULL);
+    key_t remKey = ftok("keyfile", 90);
+    key_t key = ftok("keyfile", 80);
+    int msgid = msgget(key, 0666 | IPC_CREAT);
+    int msgid2 = msgget(remKey, 0666 | IPC_CREAT);
+    msgctl(msgid, IPC_RMID, NULL);
+    msgctl(msgid2, IPC_RMID, NULL);
+    key_t key_id2 = ftok("keyfile", 70);
+    int msgq2_id = msgget(key_id2, 0666 | IPC_CREAT);
+    msgctl(msgq2_id, IPC_RMID, NULL);
+
+    //========================================DELETING THE SEMAPHORES============================================//
+    int semid1 = semget(server_sem_key, 1, IPC_CREAT | 0666);
+    int semid3 = semget(sem_3_key, 1, IPC_CREAT | 0666);
+    int semid2 = semget(sem_2_key, 1, IPC_CREAT | 0666);
+    semctl(semid1, 0, IPC_RMID, NULL);
+    semctl(semid2, 0, IPC_RMID, NULL);
+    semctl(semid3, 0, IPC_RMID, NULL);
 }
