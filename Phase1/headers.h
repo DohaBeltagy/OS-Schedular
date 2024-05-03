@@ -59,9 +59,16 @@ void initClk()
 void destroyClk(bool terminateAll)
 {
     shmdt(shmaddr);
+
+    int shmid = shmget(SHKEY, 4, 0444);
+    if(shmctl(shmid, IPC_RMID, NULL) ==-1)
+    {
+        perror("error in deleting the clock shared memory");
+    }
+
     if (terminateAll)
     {
-        killpg(getpgrp(), SIGKILL);
+        killpg(getpgrp(), SIGTERM);
     }
 }
 

@@ -230,11 +230,13 @@ int main(int argc, char *argv[])
         sleep(1);
     }
     // 7. wait on scheduler
-    //wait on scheduler
     waitpid(scheduler, NULL, 0);
+    // 8.destroy clock
+    destroyClk(true);
 }
 
 void clearResources(int signum)
 {
     // TODO Clears all resources in case of interruption
+    
 }

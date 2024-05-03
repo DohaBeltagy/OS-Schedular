@@ -7,8 +7,10 @@
 
 FILE *perf_file;
 
-void handle_signal(int signal) {
-    if (perf_file != NULL) {
+void handle_signal(int signal)
+{
+    if (perf_file != NULL)
+    {
         fclose(perf_file);
     }
     exit(signal);
@@ -111,15 +113,17 @@ int main(int argc, char *argv[])
         printf("Number of processes equals : %d \n", details.processesNum);
     }
     FILE *file = fopen("log.txt", "w");
-    if (file == NULL) {
+    if (file == NULL)
+    {
         perror("Error opening file");
         exit(EXIT_FAILURE);
     }
-    //Print how log works
+    // Print how log works
     fprintf(file, "#At time x Process y state arr w total z remain y wait k\n");
     fflush(file);
+    int finishedProcesses = 0;
 
-    int finishedProcesses=0;
+    // Round Robin Algorithm
     if (algo == 1)
     {
         // Creating queue
@@ -130,14 +134,14 @@ int main(int argc, char *argv[])
         Process process;
 
         // Receive process objects from the message queue
-        while (finishedProcesses<processNum)
+        while (finishedProcesses < processNum)
         {
             down(semid2);
             int sem_value;
             if ((sem_value = semctl(semid2, 0, GETVAL)) == -1)
             {
                 perror("Error getting semaphore value");
-                //exit(EXIT_FAILURE);
+                // exit(EXIT_FAILURE);
             }
             if (msgrcv(msgq1_id, &message, sizeof(struct msgbuff), 7, IPC_NOWAIT) == -1)
             {
@@ -146,7 +150,7 @@ int main(int argc, char *argv[])
             }
             else
             {
-                printf("Message recieved successfully from process\n");
+                printf("Message recieved successfully from process generator\n");
                 printf("process id: %d \n", message.process.id);
                 message.process.pcb.state = 0;
                 message.process.pcb.waiting_time = 0;
@@ -165,7 +169,6 @@ int main(int argc, char *argv[])
                     rdy_processCount--;
                     if (rdy_processCount > 0)
                     {
-                        printf("I entered here\n");
                         Process processCalc;
                         for (int i = 0; i < rdy_processCount; i++)
                         {
@@ -183,16 +186,13 @@ int main(int argc, char *argv[])
                         if (pid < 0)
                         {
                             perror("Fork failed");
-                            //exit(EXIT_FAILURE);
                         }
                         else if (pid == 0)
                         {
                             // Child process
-
                             char *const args[] = {"./process.out", NULL};
                             execv("./process.out", args);
                             perror("Execv failed");
-                            //exit(EXIT_FAILURE);
                         }
                         else
                         {
@@ -202,26 +202,26 @@ int main(int argc, char *argv[])
                             if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
                             {
                                 perror("msgsnd");
-                                //exit(EXIT_FAILURE);
                             }
                             else
                             {
-                                printf("Message sent successfuuly;\n");
+                                printf("Message sent successfuly from scheduler to process\n");
                             }
                             printf("Process %d started\n", next_process.id);
                             next_process.isForked = true; // Mark the process as forked
-                            next_process.display = pid;
-                            //print state at process start in file
+                            next_process.display = pid;   // Set the process's pid to its actual pid
+                            // print state at process start in file
                             int total = process.runtime;
                             fprintf(file, "At time %d Process %d started arr %d total %d remain %d wait %d\n", getClk(), next_process.id, next_process.arrival_time, total, next_process.pcb.rem_time, next_process.pcb.waiting_time);
                             fflush(file);
                         }
                     }
+                    // the process is an old process (already forked)
                     else
                     {
                         printf("Process %d resumed\n", next_process.id);
-                        //print process resumed state in file
-                        int total = process.runtime;
+                        // print process resumed state in file
+                        int total = next_process.runtime;
                         fprintf(file, "At time %d Process %d resumed arr %d total %d remain %d wait %d\n", getClk(), next_process.id, next_process.arrival_time, total, next_process.pcb.rem_time, next_process.pcb.waiting_time);
                         fflush(file);
                         kill(next_process.display, SIGCONT);
@@ -231,26 +231,25 @@ int main(int argc, char *argv[])
                         if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
                         {
                             perror("msgsnd");
-                            //exit(EXIT_FAILURE);
                         }
                         else
                         {
                             printf("Message sent from scheduler\n");
                         }
                     }
-
                     running_process_id = next_process.id;
                     remaining_quantum = quanta; // Reset quantum for new process
                     process = next_process;
                 }
+                // queue is empty and the program is still running
                 else
                 {
                     idleTime++;
                 }
             }
+            // There is a process running
             else
             {
-                // There is a process running
                 if (remaining_quantum > 0)
                 {
                     remaining_quantum--;
@@ -258,7 +257,9 @@ int main(int argc, char *argv[])
                     if (rdy_processCount > 0)
                     {
                         Process processCalc;
-                        printf("I entered here\n");
+                        // for each process in the ready queue
+                        // dequeue the process and increase its waiting time
+                        // then enqueue the process again.
                         for (int i = 0; i < rdy_processCount; i++)
                         {
                             Process processCalc = dequeue(queue);
@@ -271,7 +272,6 @@ int main(int argc, char *argv[])
                     if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
                     {
                         perror("msgsnd");
-                        //exit(EXIT_FAILURE);
                     }
                     else
                     {
@@ -286,7 +286,7 @@ int main(int argc, char *argv[])
                     kill(process.display, SIGSTOP);
                     rdy_processCount++;
                     printf("Process %d stopped\n", process.id);
-                    //print process stopped state in file
+                    // print process stopped state in file
                     int total = process.runtime;
                     fprintf(file, "At time %d Process %d stopped arr %d total %d remain %d wait %d\n", getClk(), process.id, process.arrival_time, total, process.pcb.rem_time, process.pcb.waiting_time);
                 }
@@ -294,10 +294,10 @@ int main(int argc, char *argv[])
             }
             // Wait for a clock tick
             sleep(1);
+            //message queue to recieve notification from process upon termination
             if (msgrcv(msgid, &processState, sizeof(processState), 80, IPC_NOWAIT) == -1)
             {
                 // perror("msgrcv");
-                // exit(EXIT_FAILURE);
             }
             else
             {
@@ -305,7 +305,7 @@ int main(int argc, char *argv[])
                 finishedProcesses++;
                 process.pcb.finish_time = getClk();
                 printf("Finish Time = %d", process.pcb.finish_time);
-                //print state at termination in file
+                // print state at termination in file
                 int total = process.runtime;
                 fprintf(file, "At time %d Process %d finished arr %d total %d remain %d wait %d\n", getClk(), process.id, process.arrival_time, total, process.pcb.rem_time, process.pcb.waiting_time);
                 fflush(file);
@@ -327,7 +327,7 @@ int main(int argc, char *argv[])
         queue = createSRTNQueue();
         int running_process_id = -1;
         Process running_process;
-        Process next_process ;
+        Process next_process;
 
         // Receive process objects from the message queue
         while (finishedProcesses < processNum)
@@ -350,7 +350,7 @@ int main(int argc, char *argv[])
             if ((sem_value = semctl(semid2, 0, GETVAL)) == -1)
             {
                 perror("Error getting semaphore value");
-                //exit(EXIT_FAILURE);
+                // exit(EXIT_FAILURE);
             }
             // if no process was received at this second
             if (msgrcv(msgq1_id, &message, sizeof(struct msgbuff), 7, IPC_NOWAIT) == -1)
@@ -358,14 +358,14 @@ int main(int argc, char *argv[])
                 // if there was a running process
                 if (running_process_id != -1)
                 {
-                    //decrement the remaining time and check termination 
-                    running_process.pcb.rem_time --;
+                    // decrement the remaining time and check termination
+                    running_process.pcb.rem_time--;
                     remMsg.remaining_time = running_process.pcb.rem_time;
                     remMsg.mtype = 36;
                     if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
                     {
                         perror("msgsnd");
-                        //exit(EXIT_FAILURE);
+                        // exit(EXIT_FAILURE);
                     }
                     else
                     {
@@ -384,7 +384,7 @@ int main(int argc, char *argv[])
                     if (pid < 0)
                     {
                         perror("Fork failed");
-                        //exit(EXIT_FAILURE);
+                        // exit(EXIT_FAILURE);
                     }
                     else if (pid == 0)
                     {
@@ -395,7 +395,7 @@ int main(int argc, char *argv[])
                         char *const args[] = {"./process.out", NULL};
                         execv("./process.out", args);
                         perror("Execv failed");
-                        //exit(EXIT_FAILURE);
+                        // exit(EXIT_FAILURE);
                     }
                     else
                     {
@@ -405,7 +405,7 @@ int main(int argc, char *argv[])
                         if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
                         {
                             perror("msgsnd");
-                            //exit(EXIT_FAILURE);
+                            // exit(EXIT_FAILURE);
                         }
                         else
                         {
@@ -417,7 +417,7 @@ int main(int argc, char *argv[])
                 // perror("Error receiving message");
                 // exit(EXIT_FAILURE);
             }
-            else  // there was a process received at this second 
+            else // there was a process received at this second
             {
                 printf("Message recieved successfully from process\n");
                 printf("process id: %d \n", message.process.id);
@@ -460,12 +460,12 @@ int main(int argc, char *argv[])
                         {
                             printf("Message sent successfuuly;\n");
                         }
-                        printf("Process %d started\n",running_process.id);
+                        printf("Process %d started\n", running_process.id);
                     }
                 }
                 // if there was a running process and the incoming process has a higher priority than that of the running process
-                else if ( running_process_id != 1 && running_process.pcb.rem_time > message.process.pcb.rem_time)
-                {   
+                else if (running_process_id != 1 && running_process.pcb.rem_time > message.process.pcb.rem_time)
+                {
                     next_process = getSRTNHead(queue);
                     SRTNenqueue(queue, running_process);
                     kill(running_process.display, SIGSTOP);
@@ -506,12 +506,12 @@ int main(int argc, char *argv[])
                     displaySRTNQueue(queue);
                 }
                 // if there is no running process and the remaining time of the incoming process is less than that of the next process in the queue
-                else if (running_process_id == -1 && getSRTNHead(queue).pcb.rem_time < message.process.pcb.rem_time) 
+                else if (running_process_id == -1 && getSRTNHead(queue).pcb.rem_time < message.process.pcb.rem_time)
                 {
                     running_process = getSRTNHead(queue);
                     running_process_id = running_process.id;
                     SRTNdequeue(queue);
-                    SRTNenqueue(queue,message.process);
+                    SRTNenqueue(queue, message.process);
                     running_process.isForked = true;
                     // Fork a new process to execute the program
                     pid_t pid = fork();
@@ -546,10 +546,10 @@ int main(int argc, char *argv[])
                     }
                     displaySRTNQueue(queue);
                 }
-                else 
+                else
                 {
-                    //decrement the remaining time and check termination 
-                    running_process.pcb.rem_time --;
+                    // decrement the remaining time and check termination
+                    running_process.pcb.rem_time--;
                     remMsg.remaining_time = running_process.pcb.rem_time;
                     remMsg.mtype = 36;
                     if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
@@ -564,19 +564,19 @@ int main(int argc, char *argv[])
                     SRTNenqueue(queue, message.process);
                     displaySRTNQueue(queue);
                 }
-            } 
+            }
             up(semid3);
-            sleep(1);     
+            sleep(1);
         }
-    }    
-    else if (algo == 3)  // non-preemptive highest priority first
+    }
+    else if (algo == 3) // non-preemptive highest priority first
     {
         // Creating queue
         HPFQueue *queue;
         queue = createHPFQueue();
         int running_process_id = -1;
         Process running_process;
-        Process next_process ;
+        Process next_process;
 
         // Receive process objects from the message queue
         while (finishedProcesses < processNum)
@@ -599,7 +599,7 @@ int main(int argc, char *argv[])
             if ((sem_value = semctl(semid2, 0, GETVAL)) == -1)
             {
                 perror("Error getting semaphore value");
-                //exit(EXIT_FAILURE);
+                // exit(EXIT_FAILURE);
             }
             // if no process was received at this second
             if (msgrcv(msgq1_id, &message, sizeof(struct msgbuff), 7, IPC_NOWAIT) == -1)
@@ -608,14 +608,14 @@ int main(int argc, char *argv[])
                 if (running_process_id != -1)
                 {
                     printf("no process received and running process\n");
-                    //decrement the remaining time and check termination 
-                    running_process.pcb.rem_time --;
+                    // decrement the remaining time and check termination
+                    running_process.pcb.rem_time--;
                     remMsg.remaining_time = running_process.pcb.rem_time;
                     remMsg.mtype = 36;
                     if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
                     {
                         perror("msgsnd");
-                        //exit(EXIT_FAILURE);
+                        // exit(EXIT_FAILURE);
                     }
                     else
                     {
@@ -635,7 +635,7 @@ int main(int argc, char *argv[])
                     if (pid < 0)
                     {
                         perror("Fork failed");
-                        //exit(EXIT_FAILURE);
+                        // exit(EXIT_FAILURE);
                     }
                     else if (pid == 0)
                     {
@@ -646,7 +646,7 @@ int main(int argc, char *argv[])
                         char *const args[] = {"./process.out", NULL};
                         execv("./process.out", args);
                         perror("Execv failed");
-                        //exit(EXIT_FAILURE);
+                        // exit(EXIT_FAILURE);
                     }
                     else
                     {
@@ -656,7 +656,7 @@ int main(int argc, char *argv[])
                         if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
                         {
                             perror("msgsnd");
-                            //exit(EXIT_FAILURE);
+                            // exit(EXIT_FAILURE);
                         }
                         else
                         {
@@ -668,7 +668,7 @@ int main(int argc, char *argv[])
                 // perror("Error receiving message");
                 // exit(EXIT_FAILURE);
             }
-            else  // there was a process received at this second 
+            else // there was a process received at this second
             {
                 printf("Message recieved successfully from process\n");
                 printf("process id: %d \n", message.process.id);
@@ -676,7 +676,7 @@ int main(int argc, char *argv[])
                 message.process.pcb.waiting_time = 0;
                 message.process.pcb.rem_time = message.process.runtime;
 
-                // if there was no running process and no processes in the ready queue or the priority of the incoming process 
+                // if there was no running process and no processes in the ready queue or the priority of the incoming process
                 // is higher than that of the head of the ready queue
                 if (running_process_id == -1 && (isHPFEmpty(queue) || getHPFHead(queue).priority > message.process.priority))
                 {
@@ -712,17 +712,17 @@ int main(int argc, char *argv[])
                         {
                             printf("Message sent successfuuly;\n");
                         }
-                        printf("Process %d started\n",running_process.id);
+                        printf("Process %d started\n", running_process.id);
                     }
                 }
-                else  // there is a running process 
+                else // there is a running process
                 {
                     printf(" el else el akhira \n");
-                    // enqueue the incoming process in the ready queue and decrement the remaining time of the running process 
+                    // enqueue the incoming process in the ready queue and decrement the remaining time of the running process
                     HPFenqueue(queue, message.process);
                     printf("enqueued\n");
                     displayHPFQueue(queue);
-                    running_process.pcb.rem_time --;
+                    running_process.pcb.rem_time--;
                     remMsg.remaining_time = running_process.pcb.rem_time;
                     remMsg.mtype = 36;
                     if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
@@ -735,31 +735,32 @@ int main(int argc, char *argv[])
                         printf("Message sent successfuuly;\n");
                     }
                 }
-            } 
+            }
             up(semid3);
-            sleep(1);     
+            sleep(1);
         }
     }
     fclose(file);
-    //creates perf file
+    // creates perf file
     perf_file = fopen("perf.txt", "w");
-    if (file == NULL) {
+    if (file == NULL)
+    {
         perror("Error opening file");
         exit(EXIT_FAILURE);
     }
-    //Calc cpu utilization
+    // Calc cpu utilization
     float cpuUti = ((totalTime - idleTime) / totalTime) * 100;
-    //print cpu utilization to file
-    //printf("Yo\n");
+    // print cpu utilization to file
+    // printf("Yo\n");
     fprintf(perf_file, "CPU utilization = %f %%\n", cpuUti);
     fflush(perf_file);
     float totalWTA = 0;
     float totalWT = 0;
-    //Calc total WTA and WT
+    // Calc total WTA and WT
     for (int i = 0; i < details.processesNum; i++)
     {
         Process processCalc = dequeue(finished);
-        if(processCalc.runtime == 0)
+        if (processCalc.runtime == 0)
         {
             continue;
         }
@@ -770,21 +771,20 @@ int main(int argc, char *argv[])
         enqueue(finished, processCalc);
     }
 
-    //Calc avg. weighted turnaround time
+    // Calc avg. weighted turnaround time
     float avg_WTA = totalWTA / details.processesNum;
     printf("This is Avg WTA = %f\n", avg_WTA);
-    //prints avg weighted turnaround time in file
+    // prints avg weighted turnaround time in file
     fprintf(perf_file, "Avg WTA = %f\n", avg_WTA);
     fflush(perf_file);
-    //Calc avg. waiting time
+    // Calc avg. waiting time
     float avg_WT = totalWT / details.processesNum;
-    //Prints avg. waiting time in file
+    // Prints avg. waiting time in file
     printf("This is avg waiting = %f\n", avg_WT);
     fprintf(perf_file, "Avg Waiting = %f\n", avg_WT);
     fflush(perf_file);
     fclose(perf_file);
 
-    //TODO: Implement standard deviation
+    // TODO: Implement standard deviation
     destroyClk(true);
-   
 }
