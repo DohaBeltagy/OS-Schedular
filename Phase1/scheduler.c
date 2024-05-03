@@ -543,32 +543,18 @@ int main(int argc, char *argv[])
                 // if there was a running process and the incoming process has less remaining time than that of the running process
                 else if (running_process_id != 1 && running_process.pcb.rem_time > message.process.pcb.rem_time)
                 {
-
-                    printf("STEP 1\n");
                     SRTNenqueue(queue, running_process);
-                    printf("STEP 2\n");
                     rdy_processCount++;
                     kill(running_process.display, SIGSTOP);
-                    printf("STEP 3\n");
                     int total = running_process.runtime;
                     fprintf(file, "At time %d Process %d stopped arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, running_process.pcb.waiting_time);
-                    printf("STEP 4\n");
                     running_process = message.process;
                     running_process_id = message.process.id;
-                    if (message.process.isForked = false)
-                    {
-                        running_process.isForked = true;
-                        printf("Process %d started\n", running_process.id);
-                        total = running_process.runtime;
-                        fprintf(file, "At time %d Process %d started arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, next_process.pcb.waiting_time);
-                        fflush(file);
-                    }
-                    else
-                    {
-                        int total = running_process.runtime;
-                        fprintf(file, "At time %d Process %d resumed arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, running_process.pcb.waiting_time);
-                        fflush(file);
-                    }
+                    running_process.isForked = true;
+                    printf("Process %d started\n", running_process.id);
+                    total = running_process.runtime;
+                    fprintf(file, "At time %d Process %d started arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, running_process.pcb.waiting_time);
+                    fflush(file);
                     // check if the ready queue is not empty , increment the waiting time of each
                     if (!isSRTNEmpty(queue))
                     {
