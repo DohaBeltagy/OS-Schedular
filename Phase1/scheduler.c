@@ -472,6 +472,7 @@ int main(int argc, char *argv[])
                 message.process.pcb.state = 0;
                 message.process.pcb.waiting_time = 0;
                 message.process.pcb.rem_time = message.process.runtime;
+                message.process.isForked = false;
 
                 // if there was no running process and no processes in the ready queue
                 if (running_process_id == -1 && isSRTNEmpty(queue))
@@ -518,7 +519,6 @@ int main(int argc, char *argv[])
                 // if there was a running process and the incoming process has less remaining time than that of the running process
                 else if ( running_process_id != 1 && running_process.pcb.rem_time > message.process.pcb.rem_time)
                 {   
-                    next_process = getSRTNHead(queue);
                     SRTNenqueue(queue, running_process);
                     rdy_processCount++;
                     kill(running_process.display, SIGSTOP);
@@ -526,7 +526,7 @@ int main(int argc, char *argv[])
                     fprintf(file, "At time %d Process %d stopped arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, running_process.pcb.waiting_time);
                     running_process = message.process;
                     running_process_id = message.process.id;
-                    if (running_process.isForked = false)
+                    if (message.process.isForked = false)
                     {
                         running_process.isForked = true;
                         printf("Process %d started\n", running_process.id);
@@ -552,6 +552,7 @@ int main(int argc, char *argv[])
                             SRTNenqueue(queue, processCalc);
                         }
                     }
+                    next_process = getSRTNHead(queue);
                     // Fork a new process to execute the program
                     pid_t pid = fork();
                     if (pid < 0)
