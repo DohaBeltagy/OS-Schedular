@@ -22,7 +22,7 @@ Node* createHPFNode(Process data) {
     Node* newNode = (Node*)malloc(sizeof(Node));
     if (newNode == NULL) {
         fprintf(stderr, "Memory allocation failed\n");
-        exit(EXIT_FAILURE);
+        // exit(EXIT_FAILURE);
     }
     newNode->data = data;
     newNode->next = NULL;
@@ -34,7 +34,7 @@ HPFQueue* createHPFQueue() {
     HPFQueue* queue = (HPFQueue*)malloc(sizeof(HPFQueue));
     if (queue == NULL) {
         fprintf(stderr, "Memory allocation failed\n");
-        exit(EXIT_FAILURE);
+        // exit(EXIT_FAILURE);
     }
     queue->front = queue->rear = NULL;
     return queue;
@@ -85,7 +85,6 @@ void HPFenqueue(HPFQueue* queue, Process data) {
             {
                 queue->front = newNode ;
             }
-            
             if (curr_ptr == NULL) 
             {
                 queue->rear = newNode;
@@ -98,7 +97,7 @@ void HPFenqueue(HPFQueue* queue, Process data) {
 Process HPFdequeue(HPFQueue* queue) {
     if (isHPFEmpty(queue)) {
         fprintf(stderr, "Queue is empty\n");
-        exit(EXIT_FAILURE);
+        // exit(EXIT_FAILURE);
     }
     Node* temp = queue->front;
     Process data = temp->data;
