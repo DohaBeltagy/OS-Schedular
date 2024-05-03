@@ -61,7 +61,7 @@ void destroyClk(bool terminateAll)
     shmdt(shmaddr);
     if (terminateAll)
     {
-        killpg(getpgrp(), SIGKILL);
+        killpg(getpgrp(), SIGTERM);
     }
 }
 
