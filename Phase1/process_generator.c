@@ -50,6 +50,7 @@ int read_processes(Process **processes, int *num_processes)
         int fields_read = sscanf(line, "%d\t%d\t%f\t%d", &process.id, &process.arrival_time, &process.runtime, &process.priority);
         process.pcb.rem_time=process.runtime;
         process.pcb.waiting_time = 0;
+        process.isForked = false;
         if (fields_read != 4)
         {
             fprintf(stderr, "Invalid line format: %s\n", line);

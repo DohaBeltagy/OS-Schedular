@@ -24,6 +24,7 @@ Node* createSRTNNode(Process data) {
     return newNode;
 }
 
+
 // Function to initialize a queue
 SRTNQueue* createSRTNQueue() {
     SRTNQueue* queue = (SRTNQueue*)malloc(sizeof(SRTNQueue));
