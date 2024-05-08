@@ -78,7 +78,7 @@ int main(int argc, char * argv[])
     while (1)
     {
         down(semid3);
-        sleep(1);
+        sleep(0.25); 
         (*shmaddr)++;
         printf("this is the clock: %d \n", *shmaddr);
         up(semid2);

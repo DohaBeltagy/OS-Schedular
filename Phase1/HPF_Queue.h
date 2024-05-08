@@ -1,4 +1,4 @@
-#ifndef HPF_QUEUE_H 
+#ifndef HPF_QUEUE_H
 #define HPF_QUEUE_H
 
 #include "stdio.h"
@@ -12,15 +12,18 @@
 // } Node;
 
 // Define the structure for the queue
-typedef struct {
-    Node* front;
-    Node* rear;
+typedef struct
+{
+    Node *front;
+    Node *rear;
 } HPFQueue;
 
 // Function to create a new node
-Node* createHPFNode(Process data) {
-    Node* newNode = (Node*)malloc(sizeof(Node));
-    if (newNode == NULL) {
+Node *createHPFNode(Process data)
+{
+    Node *newNode = (Node *)malloc(sizeof(Node));
+    if (newNode == NULL)
+    {
         fprintf(stderr, "Memory allocation failed\n");
         // exit(EXIT_FAILURE);
     }
@@ -30,9 +33,11 @@ Node* createHPFNode(Process data) {
 }
 
 // Function to initialize a queue
-HPFQueue* createHPFQueue() {
-    HPFQueue* queue = (HPFQueue*)malloc(sizeof(HPFQueue));
-    if (queue == NULL) {
+HPFQueue *createHPFQueue()
+{
+    HPFQueue *queue = (HPFQueue *)malloc(sizeof(HPFQueue));
+    if (queue == NULL)
+    {
         fprintf(stderr, "Memory allocation failed\n");
         // exit(EXIT_FAILURE);
     }
@@ -41,65 +46,62 @@ HPFQueue* createHPFQueue() {
 }
 
 // Function to check if the queue is empty
-int isHPFEmpty(HPFQueue* queue) {
+int isHPFEmpty(HPFQueue *queue)
+{
     return queue->front == NULL;
 }
 
 // Function to enqueue a process
-void HPFenqueue(HPFQueue* queue, Process data) {
-    Node* newNode = createHPFNode(data);
-    if (isHPFEmpty(queue)) 
+void HPFenqueue(HPFQueue *queue, Process data)
+{
+    Node *newNode = createHPFNode(data);
+    if (isHPFEmpty(queue))
     {
-        queue->front = queue->rear = newNode;
-    } 
-    else 
-    {   Node* prev_ptr = NULL;
-        Node* curr_ptr = queue->front;
-        if (queue-> front == queue-> rear && queue->front != NULL)
+        printf("the hpf queue is empty \n");
+        queue->front = newNode;
+        queue->rear = newNode;
+    }
+    else
+    {
+        printf("the queue is not empty\n");
+        Node *prev_ptr = NULL;
+        Node *curr_ptr = queue->front;
+
+        while (newNode->data.priority > curr_ptr->data.priority)
         {
-            if (newNode->data.priority < curr_ptr->data.priority)
+            prev_ptr = curr_ptr;
+            curr_ptr = curr_ptr->next;
+            if(curr_ptr == NULL)
             {
-                queue-> front = newNode;
-                newNode-> next = curr_ptr;
-                queue-> rear = curr_ptr;
-            }
-            else 
-            {
-                curr_ptr -> next = newNode;
-                queue-> rear = newNode;
+                break;
             }
         }
-        else 
+        if (curr_ptr == NULL)
         {
-            while(newNode->data.priority > curr_ptr->data.priority)
-            {
-                prev_ptr = curr_ptr;
-                curr_ptr= curr_ptr->next;
-            }
-            newNode -> next = curr_ptr;
-            if(prev_ptr != NULL)
-            {
-                prev_ptr->next = newNode;
-            }
-            else 
-            {
-                queue->front = newNode ;
-            }
-            if (curr_ptr == NULL) 
-            {
-                queue->rear = newNode;
-            }
+            prev_ptr->next = newNode; // added this line
+            queue->rear = newNode;
+            return;
+        }
+        newNode->next = curr_ptr;
+        if (prev_ptr != NULL)
+        {
+            prev_ptr->next = newNode;
+        }
+        else
+        {
+            queue->front = newNode;
         }
     }
 }
 
 // Function to dequeue a process
-Process HPFdequeue(HPFQueue* queue) {
-    if (isHPFEmpty(queue)) {
+Process HPFdequeue(HPFQueue *queue)
+{
+    if (isHPFEmpty(queue))
+    {
         fprintf(stderr, "Queue is empty\n");
-        // exit(EXIT_FAILURE);
     }
-    Node* temp = queue->front;
+    Node *temp = queue->front;
     Process data = temp->data;
     queue->front = queue->front->next;
     free(temp);
@@ -107,10 +109,11 @@ Process HPFdequeue(HPFQueue* queue) {
 }
 
 // Function to display the contents of the queue (for testing purposes)
-void displayHPFQueue(HPFQueue* queue) {
-    Node* current = queue->front;
-    printf("Queue: ");
-    while (current != NULL) {
+void displayHPFQueue(HPFQueue *queue)
+{
+    Node *current = queue->front;
+    while (current != NULL)
+    {
         printf("[%d] ", current->data.id);
         current = current->next;
     }
@@ -118,14 +121,17 @@ void displayHPFQueue(HPFQueue* queue) {
 }
 
 // Function to free memory allocated to the queue
-void freeHPFQueue(HPFQueue* queue) {
-    while (!isHPFEmpty(queue)) {
+void freeHPFQueue(HPFQueue *queue)
+{
+    while (!isHPFEmpty(queue))
+    {
         HPFdequeue(queue);
     }
     free(queue);
 }
 
-Process getHPFHead (HPFQueue* queue) {
+Process getHPFHead(HPFQueue *queue)
+{
     return queue->front->data;
 }
 

@@ -154,13 +154,13 @@ int main(int argc, char *argv[])
                 printf("Message recieved successfully from process generator\n");
                 printf("process id: %d \n", message.process.id);
                 message.process.pcb.state = 0;
-                message.process.pcb.waiting_time = 0;
+                message.process.pcb.waiting_time = 1;
                 enqueue(queue, message.process);
                 displayQueue(queue);
                 rdy_processCount++;
                 total_procesCount++;
             }
-            
+
             if (running_process_id == -1)
             {
                 // No process is running, try to dequeue from the queue
@@ -168,8 +168,17 @@ int main(int argc, char *argv[])
                 {
                     // Dequeue the next process
                     Process next_process = dequeue(queue);
-                    printf("This is process %d, with waiting: %d \n", next_process.id, next_process.pcb.waiting_time);
                     rdy_processCount--;
+                    if (rdy_processCount > 0)
+                    {
+                        Process processCalc;
+                        for (int i = 0; i < rdy_processCount; i++)
+                        {
+                            Process processCalc = dequeue(queue);
+                            processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
+                            enqueue(queue, processCalc);
+                        }
+                    }
 
                     // Check if the process has already been forked
                     if (!next_process.isForked)
@@ -238,7 +247,7 @@ int main(int argc, char *argv[])
                 // queue is empty and the program is still running
                 else
                 {
-                    idleTime++; //correct don't remove
+                    idleTime++; // correct don't remove
                 }
             }
             // There is a process running
@@ -246,23 +255,21 @@ int main(int argc, char *argv[])
             {
                 if (remaining_quantum > 0)
                 {
-                    printf("This is process %d, with waiting: %d \n", process.id, process.pcb.waiting_time);
                     remaining_quantum--;
                     process.pcb.rem_time = process.pcb.rem_time - 1;
-                    // if (rdy_processCount > 0)
-                    // {
-                    //     Process processCalc;
-                    //     // for each process in the ready queue
-                    //     // dequeue the process and increase its waiting time
-                    //     // then enqueue the process again.
-                    //     for (int i = 0; i < rdy_processCount; i++)
-                    //     {
-                    //         Process processCalc = dequeue(queue);
-                    //         printf("This is process %d, with waiting: %d (and I am still waiting)\n", processCalc.id, processCalc.pcb.waiting_time);
-                    //         processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
-                    //         enqueue(queue, processCalc);
-                    //     }
-                    // }
+                    if (rdy_processCount > 0)
+                    {
+                        Process processCalc;
+                        // for each process in the ready queue
+                        // dequeue the process and increase its waiting time
+                        // then enqueue the process again.
+                        for (int i = 0; i < rdy_processCount; i++)
+                        {
+                            Process processCalc = dequeue(queue);
+                            processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
+                            enqueue(queue, processCalc);
+                        }
+                    }
                     remMsg.remaining_time = process.pcb.rem_time;
                     remMsg.mtype = 36;
                     if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
@@ -286,7 +293,7 @@ int main(int argc, char *argv[])
                     int total = process.runtime;
                     fprintf(file, "At time %d Process %d stopped arr %d total %d remain %d wait %d\n", getClk(), process.id, process.arrival_time, total, process.pcb.rem_time, process.pcb.waiting_time);
                     up(semid2);
-                continue; 
+                    continue;
                 }
                 sleep(2);
             }
@@ -319,24 +326,13 @@ int main(int argc, char *argv[])
                 enqueue(finished, process);
                 displayQueue(finished);
                 up(semid2);
-                continue; 
-            }
-            if (rdy_processCount > 0)
-            {
-                Process processCalc;
-                for (int i = 0; i < rdy_processCount; i++)
-                {
-                    Process processCalc = dequeue(queue);
-                    printf("This is process %d, with waiting: %d (and I am still waiting)\n", processCalc.id, processCalc.pcb.waiting_time);
-                    processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
-                    enqueue(queue, processCalc);
-                }
+                continue;
             }
             totalTime++;
             displayQueue(queue);
             printf("before up\n");
             up(semid3);
-            //sleep(1);
+            // sleep(1);
         }
     }
     else if (algo == 2) // shortest remaining time next
@@ -472,7 +468,6 @@ int main(int argc, char *argv[])
                         char *const args[] = {"./process.out", NULL};
                         execv("./process.out", args);
                         perror("Execv failed");
-                        // exit(EXIT_FAILURE);
                     }
                     else
                     {
@@ -482,7 +477,6 @@ int main(int argc, char *argv[])
                         if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
                         {
                             perror("msgsnd");
-                            // exit(EXIT_FAILURE);
                         }
                         else
                         {
@@ -726,6 +720,117 @@ int main(int argc, char *argv[])
         while (finishedProcesses < processNum)
         {
             down(semid2);
+            int sem_value;
+            if ((sem_value = semctl(semid2, 0, GETVAL)) == -1)
+            {
+                perror("Error getting semaphore value");
+                // exit(EXIT_FAILURE);
+            }
+            // Receive processes from the message queue
+            if (msgrcv(msgq1_id, &message, sizeof(struct msgbuff), 7, IPC_NOWAIT) == -1)
+            {
+            }
+            else // there was a process received at this second
+            {
+                printf("Message recieved successfully from process\n");
+                printf("process id: %d \n", message.process.id);
+                message.process.pcb.state = 0;
+                message.process.pcb.waiting_time = 0;
+                message.process.pcb.rem_time = message.process.runtime;
+                // enqueue the incoming process
+                displayHPFQueue(queue);
+                HPFenqueue(queue, message.process);
+                rdy_processCount++;
+                displayHPFQueue(queue);
+            }
+            // if there is no process running
+            if (running_process_id == -1)
+            {
+                if (!isHPFEmpty(queue))
+                {
+                    next_process = HPFdequeue(queue);
+                    running_process = next_process;
+                    running_process_id = running_process.id;
+                    rdy_processCount--;
+                    if (rdy_processCount > 0)
+                    {
+                        Process processCalc;
+                        for (int i = 0; i < rdy_processCount; i++)
+                        {
+                            Process processCalc = HPFdequeue(queue);
+                            processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
+                            HPFenqueue(queue, processCalc);
+                        }
+                    }
+                    pid_t pid = fork();
+                    if (pid < 0)
+                    {
+                        perror("Fork failed");
+                    }
+                    else if (pid == 0)
+                    {
+                        // Child process
+                        char *const args[] = {"./process.out", NULL};
+                        execv("./process.out", args);
+                        perror("Execv failed");
+                    }
+                    else
+                    {
+                        // Parent process
+                        remMsg.remaining_time = next_process.runtime;
+                        remMsg.mtype = 36;
+                        if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
+                        {
+                            perror("msgsnd");
+                        }
+                        else
+                        {
+                            printf("Message sent successfuly from scheduler to process\n");
+                        }
+                        printf("Process %d started\n", next_process.id);
+                        // print state at process start in file
+
+                        int total = next_process.runtime;
+                        fprintf(file, "At time %d Process %d started arr %d total %d remain %d wait %d\n", getClk(), next_process.id, next_process.arrival_time, total, next_process.pcb.rem_time, next_process.pcb.waiting_time);
+                        fflush(file);
+                    }
+                }
+                else
+                {
+                    idleTime++;
+                }
+            }
+            // there is a process running
+            else
+            {
+                running_process.pcb.rem_time = running_process.pcb.rem_time - 1;
+                if (rdy_processCount > 0)
+                {
+                    Process processCalc;
+                    // for each process in the ready queue
+                    // dequeue the process and increase its waiting time
+                    // then enqueue the process again.
+                    for (int i = 0; i < rdy_processCount; i++)
+                    {
+                        Process processCalc = HPFdequeue(queue);
+                        processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
+                        HPFenqueue(queue, processCalc);
+                    }
+                }
+                remMsg.remaining_time = running_process.pcb.rem_time;
+                remMsg.mtype = 36;
+                if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
+                {
+                    perror("msgsnd");
+                }
+                else
+                {
+                    printf("Message sent from scheduler\n");
+                }
+                sleep(2);
+            }
+
+            // recieve terminated from process
             if (msgrcv(msgid, &processState, sizeof(processState), 80, IPC_NOWAIT) == -1)
             {
                 // perror("msgrcv");
@@ -754,192 +859,11 @@ int main(int argc, char *argv[])
                 enqueue(finished, running_process);
                 displayQueue(finished);
                 running_process_id = -1;
-            }
-            int sem_value;
-            if ((sem_value = semctl(semid2, 0, GETVAL)) == -1)
-            {
-                perror("Error getting semaphore value");
-                // exit(EXIT_FAILURE);
-            }
-            // if no process was received at this second
-            if (msgrcv(msgq1_id, &message, sizeof(struct msgbuff), 7, IPC_NOWAIT) == -1)
-            {
-                // if there was a running process
-                if (running_process_id != -1)
-                {
-                    if (rdy_processCount > 0)
-                    {
-                        printf("I entered here\n");
-                        Process processCalc;
-                        for (int i = 0; i < rdy_processCount; i++)
-                        {
-                            Process processCalc = HPFdequeue(queue);
-                            processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
-                            HPFenqueue(queue, processCalc);
-                        }
-                    }
-                    // decrement the remaining time and check termination
-                    running_process.pcb.rem_time--;
-                    remMsg.remaining_time = running_process.pcb.rem_time;
-                    remMsg.mtype = 36;
-                    if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
-                    {
-                        perror("msgsnd");
-                        // exit(EXIT_FAILURE);
-                    }
-                    else
-                    {
-                        printf("Message sent successfuly;\n");
-                    }
-                }
-                // if there was no running process and the ready queue wasn't empty
-                else if (running_process_id == -1 && !isHPFEmpty(queue))
-                {
-                    // check if the ready queue is not empty , increment the waiting time of each
-                    if (rdy_processCount > 0)
-                    {
-                        printf("I entered here\n");
-                        Process processCalc;
-                        for (int i = 0; i < rdy_processCount; i++)
-                        {
-                            Process processCalc = HPFdequeue(queue);
-                            processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
-                            HPFenqueue(queue, processCalc);
-                        }
-                    }
-                    // dequeue the process next in line and make it the running process
-                    next_process = getHPFHead(queue);
-                    running_process = next_process;
-                    running_process_id = next_process.id;
-                    HPFdequeue(queue);
-                    printf("Process %d started\n", running_process.id);
-                    rdy_processCount--;
-                    int total = running_process.runtime;
-                    fprintf(file, "At time %d Process %d started arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, running_process.pcb.waiting_time);
-                    fflush(file);
-                    pid_t pid = fork();
-                    if (pid < 0)
-                    {
-                        perror("Fork failed");
-                        // exit(EXIT_FAILURE);
-                    }
-                    else if (pid == 0)
-                    {
-                        // Child process
-                        running_process = message.process;
-                        running_process_id = message.process.id;
-                        running_process.isForked = true;
-                        char *const args[] = {"./process.out", NULL};
-                        execv("./process.out", args);
-                        perror("Execv failed");
-                        // exit(EXIT_FAILURE);
-                    }
-                    else
-                    {
-                        // Parent process
-                        remMsg.remaining_time = running_process.runtime;
-                        remMsg.mtype = 36;
-                        if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
-                        {
-                            perror("msgsnd");
-                            // exit(EXIT_FAILURE);
-                        }
-                        else
-                        {
-                            printf("Message sent successfuuly;\n");
-                        }
-                        printf("Process %d started\n", running_process.id);
-                    }
-                    idleTime++;
-                }
-            }
-            else // there was a process received at this second
-            {
-                printf("Message recieved successfully from process\n");
-                printf("process id: %d \n", message.process.id);
-                message.process.pcb.state = 0;
-                message.process.pcb.waiting_time = 0;
-                message.process.pcb.rem_time = message.process.runtime;
-
-                // if there was no running process and no processes in the ready queue or the priority of the incoming process
-                // is higher than that of the head of the ready queue
-                if (running_process_id == -1 && (isHPFEmpty(queue) || getHPFHead(queue).priority > message.process.priority))
-                {
-                    // check if the ready queue is not empty , increment the waiting time of each
-                    if (rdy_processCount > 0)
-                    {
-                        printf("I entered here\n");
-                        Process processCalc;
-                        for (int i = 0; i < rdy_processCount; i++)
-                        {
-                            Process processCalc = HPFdequeue(queue);
-                            processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
-                            HPFenqueue(queue, processCalc);
-                        }
-                    }
-                    // Fork a new process to execute the program
-                    running_process = message.process;
-                    running_process_id = message.process.id;
-                    running_process.isForked = true;
-                    printf("Process %d started\n", running_process.id);
-                    int total = running_process.runtime;
-                    fprintf(file, "At time %d Process %d started arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, running_process.pcb.waiting_time);
-                    fflush(file);
-                    pid_t pid = fork();
-                    if (pid < 0)
-                    {
-                        perror("Fork failed");
-                        exit(EXIT_FAILURE);
-                    }
-                    else if (pid == 0)
-                    {
-                        // Child process
-                        char *const args[] = {"./process.out", NULL};
-                        execv("./process.out", args);
-                        perror("Execv failed");
-                        exit(EXIT_FAILURE);
-                    }
-                    else
-                    {
-                        // Parent process
-                        remMsg.remaining_time = running_process.runtime;
-                        remMsg.mtype = 36;
-                        if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
-                        {
-                            perror("msgsnd");
-                            exit(EXIT_FAILURE);
-                        }
-                        else
-                        {
-                            printf("Message sent successfuuly;\n");
-                        }
-                        printf("Process %d started\n", running_process.id);
-                    }
-                    idleTime++;
-                }
-                else // there is a running process
-                {
-                    // enqueue the incoming process in the ready queue and decrement the remaining time of the running process
-                    HPFenqueue(queue, message.process);
-                    rdy_processCount++;
-                    displayHPFQueue(queue);
-                    running_process.pcb.rem_time--;
-                    remMsg.remaining_time = running_process.pcb.rem_time;
-                    remMsg.mtype = 36;
-                    if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
-                    {
-                        perror("msgsnd");
-                        exit(EXIT_FAILURE);
-                    }
-                    else
-                    {
-                        printf("Message sent successfuuly;\n");
-                    }
-                }
+                up(semid2);
+                continue;
             }
             totalTime++;
             up(semid3);
-            sleep(1);
         }
     }
     fclose(file);
