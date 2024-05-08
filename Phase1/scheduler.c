@@ -160,6 +160,7 @@ int main(int argc, char *argv[])
                 rdy_processCount++;
                 total_procesCount++;
             }
+            
             if (running_process_id == -1)
             {
                 // No process is running, try to dequeue from the queue
@@ -246,7 +247,7 @@ int main(int argc, char *argv[])
                 // queue is empty and the program is still running
                 else
                 {
-                    idleTime++;
+                    idleTime++; //correct don't remove
                 }
             }
             // There is a process running
@@ -291,11 +292,11 @@ int main(int argc, char *argv[])
                     // print process stopped state in file
                     int total = process.runtime;
                     fprintf(file, "At time %d Process %d stopped arr %d total %d remain %d wait %d\n", getClk(), process.id, process.arrival_time, total, process.pcb.rem_time, process.pcb.waiting_time);
+                    up(semid2);
+                continue; 
                 }
                 sleep(2);
             }
-            // Wait for a clock tick
-            sleep(1);
             // message queue to recieve notification from process upon termination
             if (msgrcv(msgid, &processState, sizeof(processState), 80, IPC_NOWAIT) == -1)
             {
@@ -324,12 +325,14 @@ int main(int argc, char *argv[])
                 printf("This is finish queue: \n");
                 enqueue(finished, process);
                 displayQueue(finished);
+                up(semid2);
+                continue; 
             }
             totalTime++;
             displayQueue(queue);
             printf("before up\n");
             up(semid3);
-            sleep(1);
+            //sleep(1);
         }
     }
     else if (algo == 2) // shortest remaining time next

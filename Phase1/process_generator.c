@@ -201,7 +201,6 @@ int main(int argc, char *argv[])
     initClk();
     // To get time use this
     int currentTime = getClk();
-    printf("current time is %d\n", currentTime);
     // TODO Generation Main Loop
     // 5. Create a data structure for processes and provide it with its parameters.
     // 6. Send the information to the scheduler at the appropriate time.
@@ -210,11 +209,9 @@ int main(int argc, char *argv[])
     {
         // down(semid2);
         currentTime = *shmaddr;
-        printf("current time: %d \n", currentTime);
         // handle if many processes arrived at the same time
         if (currentTime >= processes[processCounter].arrival_time)
         {
-            printf("in the condition\n");
             // Pass the process object to the message queue
             message.process = processes[processCounter];
             send_val1 = msgsnd(msgq1_id, &message, sizeof(message), !IPC_NOWAIT);
@@ -225,11 +222,10 @@ int main(int argc, char *argv[])
             }
             else
             {
-                printf("message sent\n");
+                printf("message sent from process generator to scheduler\n");
             }
             processCounter++;
         }
-        sleep(1);
     }
     // 7. wait on scheduler
     waitpid(scheduler, NULL, 0);
