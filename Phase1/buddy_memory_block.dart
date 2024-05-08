@@ -1,0 +1,78 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+#define MEMORY_SIZE 1024
+#define MIN_BLOCK_SIZE 4
+
+// Structure to represent a block in the buddy system tree
+typedef struct {
+    int level;       // Level in the tree (0 for smallest blocks)
+    int is_allocated; // 1 if allocated, 0 if free
+} Block;
+
+// Array to represent the buddy system tree
+Block tree[MEMORY_SIZE / MIN_BLOCK_SIZE * 2 - 1];
+
+// Function to initialize the buddy system tree
+void buddy_init() {
+    // Initially, the entire memory is a single free block
+    tree[0].level = 0;  // Level 0 corresponds to the largest block
+    tree[0].is_allocated = 0;
+}
+
+// Function to find the index of a buddy block
+int buddy_index(int index, int level) {
+    return index ^ (1 << level); // XOR operation to find the buddy
+}
+
+// Function to allocate memory using the buddy system
+int buddy_alloc(int size) {
+    // Find the level in the tree that corresponds to the requested size
+    int level = 0;
+    while ((MIN_BLOCK_SIZE << level) < size) {
+        level++;
+    }
+
+    // Find the first available block at the required level or higher
+    int index = 0;
+    while (index < (MEMORY_SIZE / MIN_BLOCK_SIZE * 2 - 1)) {
+        if (tree[index].level >= level && !tree[index].is_allocated) {
+            // Found a suitable block
+            tree[index].is_allocated = 1;
+
+            // Split the block if it's larger than needed
+            while (tree[index].level > level) {
+                int buddy_idx = buddy_index(index, tree[index].level - 1);
+                tree[buddy_idx].level = tree[index].level - 1;
+                tree[buddy_idx].is_allocated = 0;
+                tree[index].level--;
+            }
+            return index * MIN_BLOCK_SIZE; // Return the starting address of the allocated block
+        }
+        index++;
+    }
+    return -1; // Allocation failed
+}
+
+// Function to free memory using the buddy system
+void buddy_free(int address) {
+    // Calculate the index of the block to be freed
+    int index = address / MIN_BLOCK_SIZE;
+
+    // Mark the block as free
+    tree[index].is_allocated = 0;
+
+    // Merge with buddy if possible
+    int level = tree[index].level;
+    while (level > 0) {
+        int buddy_idx = buddy_index(index, level - 1);
+        if (!tree[buddy_idx].is_allocated && tree[buddy_idx].level == level - 1) {
+            // Buddy is free, merge the blocks
+            tree[index].level++;
+            index = (index < buddy_idx) ? index : buddy_idx;
+        } else {
+            break;
+        }
+        level--;
+    }
+}
