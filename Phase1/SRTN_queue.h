@@ -44,48 +44,41 @@ int isSRTNEmpty(SRTNQueue* queue) {
 // Function to enqueue a process
 void SRTNenqueue(SRTNQueue* queue, Process data) {
     Node* newNode = createSRTNNode(data);
-    if (isSRTNEmpty(queue)) 
+    if (isSRTNEmpty(queue))
     {
-        queue->front = queue->rear = newNode;
-    } 
-    else 
-    {   Node* prev_ptr = NULL;
-        Node* curr_ptr = queue->front;
-        if (queue-> front == queue-> rear && queue->front != NULL)
+        printf("the srtn queue is empty \n");
+        queue->front = newNode;
+        queue->rear = newNode;
+    }
+    else
+    {
+        printf("the queue is not empty\n");
+        Node *prev_ptr = NULL;
+        Node *curr_ptr = queue->front;
+
+        while (newNode->data.pcb.rem_time > curr_ptr->data.pcb.rem_time)
         {
-            if (newNode->data.pcb.rem_time < curr_ptr->data.pcb.rem_time)
+            prev_ptr = curr_ptr;
+            curr_ptr = curr_ptr->next;
+            if(curr_ptr == NULL)
             {
-                queue-> front = newNode;
-                newNode-> next = curr_ptr;
-                queue-> rear = curr_ptr;
-            }
-            else 
-            {
-                curr_ptr -> next = newNode;
-                queue-> rear = newNode;
+                break;
             }
         }
-        else 
+        if (curr_ptr == NULL)
         {
-            while(newNode->data.pcb.rem_time > curr_ptr->data.pcb.rem_time)
-            {
-                prev_ptr = curr_ptr;
-                curr_ptr= curr_ptr->next;
-            }
-            newNode -> next = curr_ptr;
-            if(prev_ptr != NULL)
-            {
-                prev_ptr->next = newNode;
-            }
-            else 
-            {
-                queue->front = newNode ;
-            }
-            
-            if (curr_ptr == NULL) 
-            {
-                queue->rear = newNode;
-            }
+            prev_ptr->next = newNode; // added this line
+            queue->rear = newNode;
+            return;
+        }
+        newNode->next = curr_ptr;
+        if (prev_ptr != NULL)
+        {
+            prev_ptr->next = newNode;
+        }
+        else
+        {
+            queue->front = newNode;
         }
     }
 }
