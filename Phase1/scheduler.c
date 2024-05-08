@@ -154,7 +154,7 @@ int main(int argc, char *argv[])
                 printf("Message recieved successfully from process generator\n");
                 printf("process id: %d \n", message.process.id);
                 message.process.pcb.state = 0;
-                message.process.pcb.waiting_time = 1;
+                message.process.pcb.waiting_time = 0;
                 enqueue(queue, message.process);
                 displayQueue(queue);
                 rdy_processCount++;
@@ -168,17 +168,8 @@ int main(int argc, char *argv[])
                 {
                     // Dequeue the next process
                     Process next_process = dequeue(queue);
+                    printf("This is process %d, with waiting: %d \n", next_process.id, next_process.pcb.waiting_time);
                     rdy_processCount--;
-                    if (rdy_processCount > 0)
-                    {
-                        Process processCalc;
-                        for (int i = 0; i < rdy_processCount; i++)
-                        {
-                            Process processCalc = dequeue(queue);
-                            processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
-                            enqueue(queue, processCalc);
-                        }
-                    }
 
                     // Check if the process has already been forked
                     if (!next_process.isForked)
@@ -255,21 +246,23 @@ int main(int argc, char *argv[])
             {
                 if (remaining_quantum > 0)
                 {
+                    printf("This is process %d, with waiting: %d \n", process.id, process.pcb.waiting_time);
                     remaining_quantum--;
                     process.pcb.rem_time = process.pcb.rem_time - 1;
-                    if (rdy_processCount > 0)
-                    {
-                        Process processCalc;
-                        // for each process in the ready queue
-                        // dequeue the process and increase its waiting time
-                        // then enqueue the process again.
-                        for (int i = 0; i < rdy_processCount; i++)
-                        {
-                            Process processCalc = dequeue(queue);
-                            processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
-                            enqueue(queue, processCalc);
-                        }
-                    }
+                    // if (rdy_processCount > 0)
+                    // {
+                    //     Process processCalc;
+                    //     // for each process in the ready queue
+                    //     // dequeue the process and increase its waiting time
+                    //     // then enqueue the process again.
+                    //     for (int i = 0; i < rdy_processCount; i++)
+                    //     {
+                    //         Process processCalc = dequeue(queue);
+                    //         printf("This is process %d, with waiting: %d (and I am still waiting)\n", processCalc.id, processCalc.pcb.waiting_time);
+                    //         processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
+                    //         enqueue(queue, processCalc);
+                    //     }
+                    // }
                     remMsg.remaining_time = process.pcb.rem_time;
                     remMsg.mtype = 36;
                     if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
@@ -327,6 +320,17 @@ int main(int argc, char *argv[])
                 displayQueue(finished);
                 up(semid2);
                 continue; 
+            }
+            if (rdy_processCount > 0)
+            {
+                Process processCalc;
+                for (int i = 0; i < rdy_processCount; i++)
+                {
+                    Process processCalc = dequeue(queue);
+                    printf("This is process %d, with waiting: %d (and I am still waiting)\n", processCalc.id, processCalc.pcb.waiting_time);
+                    processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
+                    enqueue(queue, processCalc);
+                }
             }
             totalTime++;
             displayQueue(queue);
