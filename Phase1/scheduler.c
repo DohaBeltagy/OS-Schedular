@@ -194,10 +194,6 @@ int main(int argc, char *argv[])
                         // try to allocate memory for the process
                         // if it returned -1, this will mean that there's no space for it in the memory
                         // so we enqueue in the blocked queue and continue to get the next process
-                        for (int i = 245; i < 260; i++)
-                        {
-                            printf("Slot: %d", tree->memory[i]);
-                        }
                         printf("BEFORE THE BUDDY ALLOC\n");
                         bool found = false;
                         int process_adress = buddy_alloc(next_process.mem_size, tree, 0, 1024, &found, 10);
@@ -213,10 +209,6 @@ int main(int argc, char *argv[])
                         }
                         next_process.address = process_adress;
                         printf("MEMORY ALLOCATED SUCCEFULLY AND THIS IS ITS ADDRESS: %d\n", next_process.address);
-                        for (int i = 245; i < 260; i++)
-                        {
-                            printf("Slot: %d", tree->memory[i]);
-                        }
 
                         // Fork a new process to execute the program
                         pid_t pid = fork();
@@ -330,9 +322,9 @@ int main(int argc, char *argv[])
                     // check the blocked queue for the first process to be allocated
                     if (!isEmpty(blocked_processes))
                     {
-                        //printf("WE ARE DEQUEUEING FROM THE BLOCKED AT THE SIGSTOP\n");
-                        //Process blocked = dequeue(blocked_processes);
-                        //addFront(queue, blocked);
+                        printf("WE ARE DEQUEUEING FROM THE BLOCKED AT THE SIGSTOP\n");
+                        Process blocked = dequeue(blocked_processes);
+                        addFront(queue, blocked);
                     }
                     up(semid2);
                     continue;
@@ -370,23 +362,7 @@ int main(int argc, char *argv[])
                 displayQueue(finished);
 
                 // remove the allocated memory for the process
-                printf("Process2:\n");
-                for (int i = 245; i < 266; i++)
-                {
-                    printf("Slot: %d\n", tree->memory[i]);
-                }
                 buddy_free(process.address, tree, process.mem_size);
-                printf("Index: %d\n", process.address);
-                printf("Process1:\n");
-                for (int i = 0; i < 20; i++)
-                {
-                    printf("Slot: %d\n", tree->memory[i]);
-                }
-                printf("Process2:\n");
-                for (int i = 245; i < 266; i++)
-                {
-                    printf("Slot: %d\n", tree->memory[i]);
-                }
                 // check the blocked queue for the first process to be allocated
                 if (!isEmpty(blocked_processes))
                 {

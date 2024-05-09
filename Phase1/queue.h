@@ -127,5 +127,5 @@ void addFront(Queue *queue, Process data)
     Node *temp = queue->front;
     queue->front = newNode;
     newNode->next = temp;
-    free(temp);
+    //free(temp);
 }
