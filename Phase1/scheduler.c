@@ -5,6 +5,7 @@
 #include "SRTN_queue.h"
 #include <signal.h>
 #include <math.h>
+#include "buddy_memory_block.c"
 
 FILE *perf_file;
 
@@ -68,6 +69,10 @@ int main(int argc, char *argv[])
     float totalTime = 0;
     int rdy_processCount = 0;
     int total_procesCount = 0;
+    // Array to represent the buddy system tree
+    Block tree[((MEMORY_SIZE / MIN_BLOCK_SIZE) * 2) - 1];
+    // The first node in the tree is intialized to be not allocated
+    buddy_init(tree);
 
     // Get message queue ID
     key_t key_id = ftok("keyfile", 65);
@@ -133,6 +138,9 @@ int main(int argc, char *argv[])
         int remaining_quantum = quanta;
         int running_process_id = -1;
         Process process;
+        // a blocked queue to hold the processes that don't have a place in memory
+        Queue *blocked_processes;
+        blocked_processes = createQueue();
 
         // Receive process objects from the message queue
         while (finishedProcesses < processNum)
@@ -183,6 +191,22 @@ int main(int argc, char *argv[])
                     // Check if the process has already been forked
                     if (!next_process.isForked)
                     {
+                        // try to allocate memory for the process
+                        // if it returned -1, this will mean that there's no space for it in the memory
+                        // so we enqueue in the blocked queue and continue to get the next process
+                        printf("BEFORE THE BUDDY ALLOC\n");
+                        int process_adress = buddy_alloc(next_process.mem_size, tree);
+                        printf("AFTER THE BUDDY ALLOC\n");
+                        if (process_adress == -1)
+                        {
+                            printf("NO ENOUGH SPACE IN MEMORY, TRY AGAINI LATER\n");
+                            enqueue(blocked_processes, next_process);
+                            up(semid2);
+                            continue;
+                        }
+                        next_process.address = process_adress;
+                        printf("MEMORY ALLOCATED SUCCEFULLY AND THIS IS ITS ADDRESS: %d\n", next_process.address);
+
                         // Fork a new process to execute the program
                         pid_t pid = fork();
                         if (pid < 0)
@@ -292,6 +316,13 @@ int main(int argc, char *argv[])
                     // print process stopped state in file
                     int total = process.runtime;
                     fprintf(file, "At time %d Process %d stopped arr %d total %d remain %d wait %d\n", getClk(), process.id, process.arrival_time, total, process.pcb.rem_time, process.pcb.waiting_time);
+                    // check the blocked queue for the first process to be allocated
+                    if (!isEmpty(blocked_processes))
+                    {
+                        printf("WE ARE DEQUEUEING FROM THE BLOCKED AT THE SIGSTOP\n");
+                        Process blocked = dequeue(blocked_processes);
+                        addFront(queue, blocked);
+                    }
                     up(semid2);
                     continue;
                 }
@@ -304,6 +335,7 @@ int main(int argc, char *argv[])
             }
             else
             {
+
                 running_process_id = -1;
                 finishedProcesses++;
                 process.pcb.finish_time = getClk();
@@ -325,6 +357,16 @@ int main(int argc, char *argv[])
                 printf("This is finish queue: \n");
                 enqueue(finished, process);
                 displayQueue(finished);
+
+                // remove the allocated memory for the process
+                buddy_free(process.address, tree);
+                // check the blocked queue for the first process to be allocated
+                if (!isEmpty(blocked_processes))
+                {
+                    printf("WE ARE DEQUEUEING FROM THE BLOCKED AT THE TERMINATION\n");
+                    Process blocked = dequeue(blocked_processes);
+                    addFront(queue, blocked);
+                }
                 up(semid2);
                 continue;
             }
@@ -335,7 +377,7 @@ int main(int argc, char *argv[])
             // sleep(1);
         }
     }
-else if (algo == 2) // shortest remaining time next
+    else if (algo == 2) // shortest remaining time next
     {
         // Creating queue
         SRTNQueue *queue;
@@ -391,7 +433,7 @@ else if (algo == 2) // shortest remaining time next
                     // exit(EXIT_FAILURE);
                 }
                 else
-                {  
+                {
                     finishedProcesses++;
                     running_process.pcb.finish_time = getClk();
                     printf("Finish Time = %d", running_process.pcb.finish_time);
@@ -468,9 +510,9 @@ else if (algo == 2) // shortest remaining time next
             if (msgrcv(msgq1_id, &message, sizeof(struct msgbuff), 7, IPC_NOWAIT) == -1)
             {
                 // if there was no running process and the ready queue was empty, increment the idle time
-                if (running_process_id == -1 && isSRTNEmpty(queue)) 
+                if (running_process_id == -1 && isSRTNEmpty(queue))
                 {
-                    idleTime ++;
+                    idleTime++;
                 }
                 // if there was no running process and the ready queue wasn't empty
                 if (running_process_id == -1 && !isSRTNEmpty(queue))
@@ -662,7 +704,7 @@ else if (algo == 2) // shortest remaining time next
                         printf("Process %d started\n", running_process.id);
                         sleep(2);
                     }
-                  displaySRTNQueue(queue);  
+                    displaySRTNQueue(queue);
                 }
                 // if there is no running process and the remaining time of the incoming process is higher than that of the next process in the queue
                 else if (running_process_id == -1 && getSRTNHead(queue).pcb.rem_time < message.process.pcb.rem_time)
@@ -733,7 +775,7 @@ else if (algo == 2) // shortest remaining time next
                     }
                     displaySRTNQueue(queue);
                 }
-                 else if (running_process_id == -1 && getSRTNHead(queue).pcb.rem_time > message.process.pcb.rem_time)
+                else if (running_process_id == -1 && getSRTNHead(queue).pcb.rem_time > message.process.pcb.rem_time)
                 {
                     printf("no running process and incoming rem time < head rem time\n");
                     // Fork a new process to execute the program
@@ -778,7 +820,7 @@ else if (algo == 2) // shortest remaining time next
                     displaySRTNQueue(queue);
                 }
                 else
-                {   
+                {
                     printf("there is a running process, 3adi geddan no special cases here\n");
                     // check if the ready queue is not empty , increment the waiting time of each
                     if (!isSRTNEmpty(queue))

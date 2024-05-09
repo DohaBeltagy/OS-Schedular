@@ -47,11 +47,11 @@ int read_processes(Process **processes, int *num_processes)
         }
 
         Process process;
-        int fields_read = sscanf(line, "%d\t%d\t%f\t%d", &process.id, &process.arrival_time, &process.runtime, &process.priority);
+        int fields_read = sscanf(line, "%d\t%d\t%f\t%d\t%d", &process.id, &process.arrival_time, &process.runtime, &process.priority, &process.mem_size);
         process.pcb.rem_time = process.runtime;
         process.pcb.waiting_time = 0;
         process.isForked = false;
-        if (fields_read != 4)
+        if (fields_read != 5)
         {
             fprintf(stderr, "Invalid line format: %s\n", line);
             exit(EXIT_FAILURE);
@@ -196,7 +196,6 @@ int main(int argc, char *argv[])
         scheduler = pid2;
     }
     // 4. Use this function after creating the clock process to initialize clock
-    printf("this is the semaphore: %d \n", semid1);
     down(semid1);
     initClk();
     // To get time use this

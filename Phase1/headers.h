@@ -83,6 +83,8 @@ typedef struct
     bool isForked;
     int display;
     PCB pcb;
+    int address;
+    int mem_size;
 } Process;
 
 union Semun
