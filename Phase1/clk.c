@@ -50,22 +50,10 @@ int main(int argc, char * argv[])
         exit(-1);
     }
 
-    int semid4 = semget(sem_4_key, 1, IPC_CREAT | 0666);
-    if (semid4 == -1)
-    {
-        perror("semget");
-    }
-
-    semun.val = 0; /* initial value of the semaphore, Binary semaphore */
-    if (semctl(semid4, 0, SETVAL, semun) == -1)
-    {
-        perror("Error in semctl");
-        exit(-1);
-    }
-
 
     printf("Clock starting\n");
     signal(SIGINT, cleanup);
+    signal(SIGTERM, cleanup);
     int clk = 0;
     //Create shared memory for one integer variable 4 bytes
     shmid = shmget(SHKEY, 4, IPC_CREAT | 0644);
@@ -90,7 +78,7 @@ int main(int argc, char * argv[])
     while (1)
     {
         down(semid3);
-        sleep(1);
+        sleep(0.25); 
         (*shmaddr)++;
         printf("this is the clock: %d \n", *shmaddr);
         up(semid2);

@@ -1,3 +1,5 @@
+#ifndef HEADERS_H 
+#define HEADERS_H
 #include <stdio.h> //if you don't use scanf/printf change this include
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -10,7 +12,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
-
 typedef short bool;
 #define true 1
 #define false 0
@@ -60,22 +61,30 @@ void destroyClk(bool terminateAll)
     shmdt(shmaddr);
     if (terminateAll)
     {
-        killpg(getpgrp(), SIGINT);
+        killpg(getpgrp(), SIGTERM);
     }
 }
+
+typedef struct 
+{
+    int rem_time;
+    int state;
+    int waiting_time;   
+    int finish_time;
+} PCB;
 
 typedef struct
 {
     int id; //id read from the input file 
     int remaining_time;
     int arrival_time;
-    int runtime;
+    float runtime;
     int priority;
     bool isForked;
     int display;
-    int exec_time;
-    int state;
-    int waiting_time;
+    PCB pcb;
+    int address;
+    int mem_size;
 } Process;
 
 union Semun
@@ -127,6 +136,7 @@ struct msgbuff2
     long mtype;
     int quanta;
     int algoType;
+    int processesNum;
 };
 
 struct msgbuff3
@@ -134,3 +144,16 @@ struct msgbuff3
     long mtype;
     int state;
 };
+
+struct remMsgbuff{
+    long mtype;
+    int remaining_time;
+};
+
+// Define the structure for a node in the queue
+typedef struct Node {
+    Process data;
+    struct Node* next;
+} Node;
+
+ #endif
