@@ -154,7 +154,7 @@ int main(int argc, char *argv[])
                 printf("Message recieved successfully from process generator\n");
                 printf("process id: %d \n", message.process.id);
                 message.process.pcb.state = 0;
-                message.process.pcb.waiting_time = 1;
+                message.process.pcb.waiting_time = 0;
                 enqueue(queue, message.process);
                 displayQueue(queue);
                 rdy_processCount++;
@@ -169,17 +169,6 @@ int main(int argc, char *argv[])
                     // Dequeue the next process
                     Process next_process = dequeue(queue);
                     rdy_processCount--;
-                    if (rdy_processCount > 0)
-                    {
-                        Process processCalc;
-                        for (int i = 0; i < rdy_processCount; i++)
-                        {
-                            Process processCalc = dequeue(queue);
-                            processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
-                            enqueue(queue, processCalc);
-                        }
-                    }
-
                     // Check if the process has already been forked
                     if (!next_process.isForked)
                     {
@@ -257,19 +246,19 @@ int main(int argc, char *argv[])
                 {
                     remaining_quantum--;
                     process.pcb.rem_time = process.pcb.rem_time - 1;
-                    if (rdy_processCount > 0)
-                    {
-                        Process processCalc;
-                        // for each process in the ready queue
-                        // dequeue the process and increase its waiting time
-                        // then enqueue the process again.
-                        for (int i = 0; i < rdy_processCount; i++)
-                        {
-                            Process processCalc = dequeue(queue);
-                            processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
-                            enqueue(queue, processCalc);
-                        }
-                    }
+                    // if (rdy_processCount > 0)
+                    // {
+                    //     Process processCalc;
+                    //     // for each process in the ready queue
+                    //     // dequeue the process and increase its waiting time
+                    //     // then enqueue the process again.
+                    //     for (int i = 0; i < rdy_processCount; i++)
+                    //     {
+                    //         Process processCalc = dequeue(queue);
+                    //         processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
+                    //         enqueue(queue, processCalc);
+                    //     }
+                    // }
                     remMsg.remaining_time = process.pcb.rem_time;
                     remMsg.mtype = 36;
                     if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
@@ -326,11 +315,22 @@ int main(int argc, char *argv[])
                 enqueue(finished, process);
                 displayQueue(finished);
                 up(semid2);
+                totalTime++;
                 continue;
             }
             totalTime++;
             displayQueue(queue);
             printf("before up\n");
+            if (rdy_processCount > 0)
+            {
+                Process processCalc;
+                for (int i = 0; i < rdy_processCount; i++)
+                {
+                    Process processCalc = dequeue(queue);
+                    processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
+                    enqueue(queue, processCalc);
+                }
+            }
             up(semid3);
             // sleep(1);
         }
@@ -860,16 +860,6 @@ else if (algo == 2) // shortest remaining time next
                     running_process = next_process;
                     running_process_id = running_process.id;
                     rdy_processCount--;
-                    if (rdy_processCount > 0)
-                    {
-                        Process processCalc;
-                        for (int i = 0; i < rdy_processCount; i++)
-                        {
-                            Process processCalc = HPFdequeue(queue);
-                            processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
-                            HPFenqueue(queue, processCalc);
-                        }
-                    }
                     pid_t pid = fork();
                     if (pid < 0)
                     {
@@ -912,19 +902,6 @@ else if (algo == 2) // shortest remaining time next
             else
             {
                 running_process.pcb.rem_time = running_process.pcb.rem_time - 1;
-                if (rdy_processCount > 0)
-                {
-                    Process processCalc;
-                    // for each process in the ready queue
-                    // dequeue the process and increase its waiting time
-                    // then enqueue the process again.
-                    for (int i = 0; i < rdy_processCount; i++)
-                    {
-                        Process processCalc = HPFdequeue(queue);
-                        processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
-                        HPFenqueue(queue, processCalc);
-                    }
-                }
                 remMsg.remaining_time = running_process.pcb.rem_time;
                 remMsg.mtype = 36;
                 if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
@@ -969,6 +946,16 @@ else if (algo == 2) // shortest remaining time next
                 running_process_id = -1;
                 up(semid2);
                 continue;
+            }
+            if (rdy_processCount > 0)
+            {
+                Process processCalc;
+                for (int i = 0; i < rdy_processCount; i++)
+                {
+                    Process processCalc = HPFdequeue(queue);
+                    processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
+                    HPFenqueue(queue, processCalc);
+                }
             }
             totalTime++;
             up(semid3);
