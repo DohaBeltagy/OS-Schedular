@@ -464,6 +464,30 @@ int main(int argc, char *argv[])
                     enqueue(finished, running_process);
                     displayQueue(finished);
                     running_process_id = -1;
+                    // remove the allocated memory for the process
+                    deallocate(running_process.address);
+                    // check the blocked queue for the first process to be allocated
+                    while (!isEmpty(blocked_processes))
+                    {
+                        // we check if the there is a place for the first process in the blocked queue
+                        // if yes, we dequeue the process and add it to the ready queue
+
+                        if (checkAllocation(blocked_processes->front->data.mem_size) == 1)
+                        {
+                            Process blocked = dequeue(blocked_processes);
+                            SRTNenqueue(queue, blocked); // to be removed
+                            rdy_processCount++;
+                            displaySRTNQueue(queue);
+                            printf("BEFORE THE BUDDY ALLOC\n");
+                            int process_adress = allocate(message.process.mem_size);
+                            printf("this is the process address %d \n", process_adress);
+                            printf("AFTER THE BUDDY ALLOC\n");
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
                     up(semid2);
                     continue;
 
@@ -540,6 +564,40 @@ int main(int argc, char *argv[])
                         int total = running_process.runtime;
                         fprintf(file, "At time %d Process %d started arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, running_process.pcb.waiting_time);
                         fflush(file);
+                        pid_t pid = fork();
+                        if (pid < 0)
+                        {
+                            perror("Fork failed");
+                            // exit(EXIT_FAILURE);
+                        }
+                        else if (pid == 0)
+                        {
+                            // Child process
+                            running_process = message.process;
+                            running_process_id = message.process.id;
+                            running_process.isForked = true;
+                            char *const args[] = {"./process.out", NULL};
+                            execv("./process.out", args);
+                            perror("Execv failed");
+                            // exit(EXIT_FAILURE);
+                        }
+                        else
+                        {
+                            // Parent process
+                            // remMsg.remaining_time = running_process.runtime;
+                            // remMsg.mtype = 36;
+                            // if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
+                            // {
+                            //     perror("msgsnd");
+                            //     // exit(EXIT_FAILURE);
+                            // }
+                            // else
+                            // {
+                            //     printf("Message sent successfuuly;\n");
+                            // }
+                            // printf("Process %d started\n", running_process.id);
+                            // sleep(2);
+                        }
                     }
                     else
                     {
@@ -558,40 +616,6 @@ int main(int argc, char *argv[])
                             processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
                             SRTNenqueue(queue, processCalc);
                         }
-                    }
-                    pid_t pid = fork();
-                    if (pid < 0)
-                    {
-                        perror("Fork failed");
-                        // exit(EXIT_FAILURE);
-                    }
-                    else if (pid == 0)
-                    {
-                        // Child process
-                        running_process = message.process;
-                        running_process_id = message.process.id;
-                        running_process.isForked = true;
-                        char *const args[] = {"./process.out", NULL};
-                        execv("./process.out", args);
-                        perror("Execv failed");
-                        // exit(EXIT_FAILURE);
-                    }
-                    else
-                    {
-                        // Parent process
-                        // remMsg.remaining_time = running_process.runtime;
-                        // remMsg.mtype = 36;
-                        // if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
-                        // {
-                        //     perror("msgsnd");
-                        //     // exit(EXIT_FAILURE);
-                        // }
-                        // else
-                        // {
-                        //     printf("Message sent successfuuly;\n");
-                        // }
-                        // printf("Process %d started\n", running_process.id);
-                        // sleep(2);
                     }
                 }
             }
@@ -603,261 +627,280 @@ int main(int argc, char *argv[])
                 message.process.pcb.waiting_time = 0;
                 message.process.pcb.rem_time = message.process.runtime;
                 message.process.isForked = false;
-
-                // if there was no running process and no processes in the ready queue
-                if (running_process_id == -1 && isSRTNEmpty(queue))
+                // try to allocate memory for the process
+                // if it returned -1, this will mean that there's no space for it in the memory
+                // so we enqueue in the blocked queue and continue to get the next process
+                printf("BEFORE THE BUDDY ALLOC\n");
+                int process_adress = allocate(message.process.mem_size);
+                printf("this is the process address %d \n", process_adress);
+                printf("AFTER THE BUDDY ALLOC\n");
+                if (process_adress == -1)
                 {
-                    printf("no running process and no process in the ready queue-> incoming process becomes running\n");
-                    // Fork a new process to execute the program
-                    running_process = message.process;
-                    running_process_id = message.process.id;
-                    running_process.isForked = true;
-                    printf("Process %d started\n", running_process.id);
-                    int total = running_process.runtime;
-                    fprintf(file, "At time %d Process %d started arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, next_process.pcb.waiting_time);
-                    fflush(file);
-                    pid_t pid = fork();
-                    if (pid < 0)
-                    {
-                        perror("Fork failed");
-                        // exit(EXIT_FAILURE);
-                    }
-                    else if (pid == 0)
-                    {
-                        // Child process
-                        char *const args[] = {"./process.out", NULL};
-                        execv("./process.out", args);
-                        perror("Execv failed");
-                        // exit(EXIT_FAILURE);
-                    }
-                    else
-                    {
-                        // Parent process
-                        remMsg.remaining_time = running_process.runtime;
-                        remMsg.mtype = 36;
-                        if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
-                        {
-                            perror("msgsnd");
-                            // exit(EXIT_FAILURE);
-                        }
-                        else
-                        {
-                            printf("Message sent successfuuly;\n");
-                        }
-                        printf("Process %d started\n", running_process.id);
-                        sleep(2);
-                    }
-                    displaySRTNQueue(queue);
-                }
-                // if there was a running process and the incoming process has less remaining time than that of the running process
-                else if (running_process_id != -1 && running_process.pcb.rem_time > message.process.pcb.rem_time)
-                {
-                    printf("there is a running process but with bigger remaining time than the incoming one\n");
-                    kill(running_process.display, SIGSTOP);
-                    SRTNenqueue(queue, running_process);
-                    rdy_processCount++;
-                    int total = running_process.runtime;
-                    sleep(2);
-                    fprintf(file, "At time %d Process %d stopped arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, running_process.pcb.waiting_time);
-                    running_process = message.process;
-                    running_process_id = message.process.id;
-                    running_process.isForked = true;
-                    printf("Process %d started\n", running_process.id);
-                    total = running_process.runtime;
-                    fprintf(file, "At time %d Process %d started arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, running_process.pcb.waiting_time);
-                    fflush(file);
-                    // check if the ready queue is not empty , increment the waiting time of each
-                    if (!isSRTNEmpty(queue))
-                    {
-                        printf("I entered here\n");
-                        Process processCalc;
-                        for (int i = 0; i < rdy_processCount; i++)
-                        {
-                            Process processCalc = SRTNdequeue(queue);
-                            processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
-                            SRTNenqueue(queue, processCalc);
-                        }
-                    }
-                    next_process = getSRTNHead(queue);
-                    // Fork a new process to execute the program
-                    next_process = getSRTNHead(queue);
-                    pid_t pid = fork();
-                    if (pid < 0)
-                    {
-                        perror("Fork failed");
-                        // exit(EXIT_FAILURE);
-                    }
-                    else if (pid == 0)
-                    {
-                        // Child process
-                        char *const args[] = {"./process.out", NULL};
-                        execv("./process.out", args);
-                        perror("Execv failed");
-                        // exit(EXIT_FAILURE);
-                    }
-                    else
-                    {
-                        // Parent process
-                        remMsg.remaining_time = running_process.runtime;
-                        remMsg.mtype = 36;
-                        if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
-                        {
-                            perror("msgsnd");
-                            // exit(EXIT_FAILURE);
-                        }
-                        else
-                        {
-                            printf("Message sent successfuuly;\n");
-                        }
-                        printf("Process %d started\n", running_process.id);
-                        sleep(2);
-                    }
-                    displaySRTNQueue(queue);
-                }
-                // if there is no running process and the remaining time of the incoming process is higher than that of the next process in the queue
-                else if (running_process_id == -1 && getSRTNHead(queue).pcb.rem_time < message.process.pcb.rem_time)
-                {
-                    printf("there is no running process and the remaining time of the incoming is greater than the head -> dequeue the head and enqueue incoming\n");
-                    running_process = getSRTNHead(queue);
-                    running_process_id = running_process.id;
-                    SRTNdequeue(queue);
-                    SRTNenqueue(queue, message.process);
-                    if (running_process.isForked == false)
-                    {
-                        running_process.isForked = true;
-                        printf("Process %d started\n", running_process.id);
-                        int total = running_process.runtime;
-                        fprintf(file, "At time %d Process %d started arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, running_process.pcb.waiting_time);
-                        fflush(file);
-                    }
-                    else
-                    {
-                        kill(running_process.display, SIGCONT);
-                        int total = running_process.runtime;
-                        fprintf(file, "At time %d Process %d resumed arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, running_process.pcb.waiting_time);
-                        fflush(file);
-                    }
-                    // check if the ready queue is not empty , increment the waiting time of each
-                    if (!isSRTNEmpty(queue))
-                    {
-                        printf("I entered here\n");
-                        Process processCalc;
-                        for (int i = 0; i < rdy_processCount; i++)
-                        {
-                            Process processCalc = SRTNdequeue(queue);
-                            processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
-                            SRTNenqueue(queue, processCalc);
-                        }
-                    }
-                    // Fork a new process to execute the program
-                    pid_t pid = fork();
-                    if (pid < 0)
-                    {
-                        perror("Fork failed");
-                        // exit(EXIT_FAILURE);
-                    }
-                    else if (pid == 0)
-                    {
-                        // Child process
-                        char *const args[] = {"./process.out", NULL};
-                        execv("./process.out", args);
-                        perror("Execv failed");
-                        // exit(EXIT_FAILURE);
-                    }
-                    else
-                    {
-                        // Parent process
-                        remMsg.remaining_time = running_process.runtime;
-                        remMsg.mtype = 36;
-                        if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
-                        {
-                            perror("msgsnd");
-                            // exit(EXIT_FAILURE);
-                        }
-                        else
-                        {
-                            printf("Message sent successfuuly;\n");
-                        }
-                        printf("Process %d started\n", running_process.id);
-                        sleep(2);
-                    }
-                    displaySRTNQueue(queue);
-                }
-                else if (running_process_id == -1 && getSRTNHead(queue).pcb.rem_time > message.process.pcb.rem_time)
-                {
-                    printf("no running process and incoming rem time < head rem time\n");
-                    // Fork a new process to execute the program
-                    running_process = message.process;
-                    running_process_id = message.process.id;
-                    running_process.isForked = true;
-                    printf("Process %d started\n", running_process.id);
-                    int total = running_process.runtime;
-                    fprintf(file, "At time %d Process %d started arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, next_process.pcb.waiting_time);
-                    fflush(file);
-                    pid_t pid = fork();
-                    if (pid < 0)
-                    {
-                        perror("Fork failed");
-                        // exit(EXIT_FAILURE);
-                    }
-                    else if (pid == 0)
-                    {
-                        // Child process
-                        char *const args[] = {"./process.out", NULL};
-                        execv("./process.out", args);
-                        perror("Execv failed");
-                        // exit(EXIT_FAILURE);
-                    }
-                    else
-                    {
-                        // Parent process
-                        remMsg.remaining_time = running_process.runtime;
-                        remMsg.mtype = 36;
-                        if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
-                        {
-                            perror("msgsnd");
-                            // exit(EXIT_FAILURE);
-                        }
-                        else
-                        {
-                            printf("Message sent successfuuly;\n");
-                        }
-                        printf("Process %d started\n", running_process.id);
-                        sleep(2);
-                    }
-                    displaySRTNQueue(queue);
+                    printf("NO ENOUGH SPACE IN MEMORY, TRY AGAIN LATER\n");
+                    enqueue(blocked_processes, message.process);
+                    printf("This is blocked queue: \n");
+                    displayQueue(blocked_processes);
                 }
                 else
                 {
-                    printf("there is a running process, 3adi geddan no special cases here\n");
-                    // check if the ready queue is not empty , increment the waiting time of each
-                    if (!isSRTNEmpty(queue))
+                    message.process.address = process_adress;
+                    printf("MEMORY ALLOCATED SUCCEFULLY AND THIS IS ITS ADDRESS: %d\n", message.process.address);
+
+                    // if there was no running process and no processes in the ready queue
+                    if (running_process_id == -1 && isSRTNEmpty(queue))
                     {
-                        Process processCalc;
-                        for (int i = 0; i < rdy_processCount; i++)
+                        printf("no running process and no process in the ready queue-> incoming process becomes running\n");
+                        // Fork a new process to execute the program
+                        running_process = message.process;
+                        running_process_id = message.process.id;
+                        running_process.isForked = true;
+                        printf("Process %d started\n", running_process.id);
+                        int total = running_process.runtime;
+                        fprintf(file, "At time %d Process %d started arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, next_process.pcb.waiting_time);
+                        fflush(file);
+                        pid_t pid = fork();
+                        if (pid < 0)
                         {
-                            Process processCalc = SRTNdequeue(queue);
-                            processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
-                            SRTNenqueue(queue, processCalc);
+                            perror("Fork failed");
+                            // exit(EXIT_FAILURE);
                         }
+                        else if (pid == 0)
+                        {
+                            // Child process
+                            char *const args[] = {"./process.out", NULL};
+                            execv("./process.out", args);
+                            perror("Execv failed");
+                            // exit(EXIT_FAILURE);
+                        }
+                        else
+                        {
+                            // Parent process
+                            remMsg.remaining_time = running_process.runtime;
+                            remMsg.mtype = 36;
+                            if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
+                            {
+                                perror("msgsnd");
+                                // exit(EXIT_FAILURE);
+                            }
+                            else
+                            {
+                                printf("Message sent successfuuly;\n");
+                            }
+                            printf("Process %d started\n", running_process.id);
+                            sleep(2);
+                        }
+                        displaySRTNQueue(queue);
                     }
-                    // // decrement the remaining time and check termination
-                    // running_process.pcb.rem_time--;
-                    // remMsg.remaining_time = running_process.pcb.rem_time;
-                    // remMsg.mtype = 36;
-                    // if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
-                    // {
-                    //     perror("msgsnd");
-                    //     // exit(EXIT_FAILURE);
-                    // }
-                    // else
-                    // {
-                    //     printf("Message sent successfuuly;\n");
-                    // }
-                    rdy_processCount++;
-                    SRTNenqueue(queue, message.process);
-                    displaySRTNQueue(queue);
-                    // sleep(2);
+                    // if there was a running process and the incoming process has less remaining time than that of the running process
+                    else if (running_process_id != -1 && running_process.pcb.rem_time > message.process.pcb.rem_time)
+                    {
+                        printf("there is a running process but with bigger remaining time than the incoming one\n");
+                        kill(running_process.display, SIGSTOP);
+                        SRTNenqueue(queue, running_process);
+                        rdy_processCount++;
+                        int total = running_process.runtime;
+                        sleep(2);
+                        fprintf(file, "At time %d Process %d stopped arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, running_process.pcb.waiting_time);
+                        running_process = message.process;
+                        running_process_id = message.process.id;
+                        running_process.isForked = true;
+                        printf("Process %d started\n", running_process.id);
+                        total = running_process.runtime;
+                        fprintf(file, "At time %d Process %d started arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, running_process.pcb.waiting_time);
+                        fflush(file);
+                        // check if the ready queue is not empty , increment the waiting time of each
+                        if (!isSRTNEmpty(queue))
+                        {
+                            printf("I entered here\n");
+                            Process processCalc;
+                            for (int i = 0; i < rdy_processCount; i++)
+                            {
+                                Process processCalc = SRTNdequeue(queue);
+                                processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
+                                SRTNenqueue(queue, processCalc);
+                            }
+                        }
+                        next_process = getSRTNHead(queue);
+                        // Fork a new process to execute the program
+                        next_process = getSRTNHead(queue);
+                        pid_t pid = fork();
+                        if (pid < 0)
+                        {
+                            perror("Fork failed");
+                            // exit(EXIT_FAILURE);
+                        }
+                        else if (pid == 0)
+                        {
+                            // Child process
+                            char *const args[] = {"./process.out", NULL};
+                            execv("./process.out", args);
+                            perror("Execv failed");
+                            // exit(EXIT_FAILURE);
+                        }
+                        else
+                        {
+                            // Parent process
+                            remMsg.remaining_time = running_process.runtime;
+                            remMsg.mtype = 36;
+                            if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
+                            {
+                                perror("msgsnd");
+                                // exit(EXIT_FAILURE);
+                            }
+                            else
+                            {
+                                printf("Message sent successfuuly;\n");
+                            }
+                            printf("Process %d started\n", running_process.id);
+                            sleep(2);
+                        }
+                        displaySRTNQueue(queue);
+                    }
+                    // if there is no running process and the remaining time of the incoming process is higher than that of the next process in the queue
+                    else if (running_process_id == -1 && getSRTNHead(queue).pcb.rem_time < message.process.pcb.rem_time)
+                    {
+                        printf("there is no running process and the remaining time of the incoming is greater than the head -> dequeue the head and enqueue incoming\n");
+                        running_process = getSRTNHead(queue);
+                        running_process_id = running_process.id;
+                        SRTNdequeue(queue);
+                        SRTNenqueue(queue, message.process);
+                        if (running_process.isForked == false)
+                        {
+                            running_process.isForked = true;
+                            printf("Process %d started\n", running_process.id);
+                            int total = running_process.runtime;
+                            fprintf(file, "At time %d Process %d started arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, running_process.pcb.waiting_time);
+                            fflush(file);
+                            // Fork a new process to execute the program
+                            pid_t pid = fork();
+                            if (pid < 0)
+                            {
+                                perror("Fork failed");
+                                // exit(EXIT_FAILURE);
+                            }
+                            else if (pid == 0)
+                            {
+                                // Child process
+                                char *const args[] = {"./process.out", NULL};
+                                execv("./process.out", args);
+                                perror("Execv failed");
+                                // exit(EXIT_FAILURE);
+                            }
+                            else
+                            {
+                                // Parent process
+                                remMsg.remaining_time = running_process.runtime;
+                                remMsg.mtype = 36;
+                                if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
+                                {
+                                    perror("msgsnd");
+                                    // exit(EXIT_FAILURE);
+                                }
+                                else
+                                {
+                                    printf("Message sent successfuuly;\n");
+                                }
+                                printf("Process %d started\n", running_process.id);
+                                sleep(2);
+                            }
+                        }
+                        else
+                        {
+                            kill(running_process.display, SIGCONT);
+                            int total = running_process.runtime;
+                            fprintf(file, "At time %d Process %d resumed arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, running_process.pcb.waiting_time);
+                            fflush(file);
+                        }
+                        // check if the ready queue is not empty , increment the waiting time of each
+                        if (!isSRTNEmpty(queue))
+                        {
+                            printf("I entered here\n");
+                            Process processCalc;
+                            for (int i = 0; i < rdy_processCount; i++)
+                            {
+                                Process processCalc = SRTNdequeue(queue);
+                                processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
+                                SRTNenqueue(queue, processCalc);
+                            }
+                        }
+                        displaySRTNQueue(queue);
+                    }
+                    else if (running_process_id == -1 && getSRTNHead(queue).pcb.rem_time > message.process.pcb.rem_time)
+                    {
+                        printf("no running process and incoming rem time < head rem time\n");
+                        // Fork a new process to execute the program
+                        running_process = message.process;
+                        running_process_id = message.process.id;
+                        running_process.isForked = true;
+                        printf("Process %d started\n", running_process.id);
+                        int total = running_process.runtime;
+                        fprintf(file, "At time %d Process %d started arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, next_process.pcb.waiting_time);
+                        fflush(file);
+                        pid_t pid = fork();
+                        if (pid < 0)
+                        {
+                            perror("Fork failed");
+                            // exit(EXIT_FAILURE);
+                        }
+                        else if (pid == 0)
+                        {
+                            // Child process
+                            char *const args[] = {"./process.out", NULL};
+                            execv("./process.out", args);
+                            perror("Execv failed");
+                            // exit(EXIT_FAILURE);
+                        }
+                        else
+                        {
+                            // Parent process
+                            remMsg.remaining_time = running_process.runtime;
+                            remMsg.mtype = 36;
+                            if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
+                            {
+                                perror("msgsnd");
+                                // exit(EXIT_FAILURE);
+                            }
+                            else
+                            {
+                                printf("Message sent successfuuly;\n");
+                            }
+                            printf("Process %d started\n", running_process.id);
+                            sleep(2);
+                        }
+                        displaySRTNQueue(queue);
+                    }
+                    else
+                    {
+                        printf("there is a running process, 3adi geddan no special cases here\n");
+                        // check if the ready queue is not empty , increment the waiting time of each
+                        if (!isSRTNEmpty(queue))
+                        {
+                            Process processCalc;
+                            for (int i = 0; i < rdy_processCount; i++)
+                            {
+                                Process processCalc = SRTNdequeue(queue);
+                                processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
+                                SRTNenqueue(queue, processCalc);
+                            }
+                        }
+                        // // decrement the remaining time and check termination
+                        // running_process.pcb.rem_time--;
+                        // remMsg.remaining_time = running_process.pcb.rem_time;
+                        // remMsg.mtype = 36;
+                        // if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
+                        // {
+                        //     perror("msgsnd");
+                        //     // exit(EXIT_FAILURE);
+                        // }
+                        // else
+                        // {
+                        //     printf("Message sent successfuuly;\n");
+                        // }
+                        rdy_processCount++;
+                        SRTNenqueue(queue, message.process);
+                        displaySRTNQueue(queue);
+                        // sleep(2);
+                    }
                 }
             }
             totalTime++;
