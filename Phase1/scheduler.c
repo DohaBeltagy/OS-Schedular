@@ -5,7 +5,7 @@
 #include "SRTN_queue.h"
 #include <signal.h>
 #include <math.h>
-#include "buddy_memory_block.c"
+#include "memory.c"
 
 FILE *perf_file;
 
@@ -20,6 +20,7 @@ void handle_signal(int signal)
 
 int main(int argc, char *argv[])
 {
+    printf("in scheduler \n");
     signal(SIGINT, handle_signal);
     signal(SIGTERM, handle_signal);
     key_t key, remKey;
@@ -69,10 +70,9 @@ int main(int argc, char *argv[])
     float totalTime = 0;
     int rdy_processCount = 0;
     int total_procesCount = 0;
-    // Array to represent the buddy system tree
-    Block tree[((MEMORY_SIZE / MIN_BLOCK_SIZE) * 2) - 1];
-    // The first node in the tree is intialized to be not allocated
-    buddy_init(tree);
+
+    initialize(1024);
+    printf("after initialize \n");
 
     // Get message queue ID
     key_t key_id = ftok("keyfile", 65);
@@ -163,9 +163,28 @@ int main(int argc, char *argv[])
                 printf("process id: %d \n", message.process.id);
                 message.process.pcb.state = 0;
                 message.process.pcb.waiting_time = 1;
-                enqueue(queue, message.process);
-                displayQueue(queue);
-                rdy_processCount++;
+                // try to allocate memory for the process
+                // if it returned -1, this will mean that there's no space for it in the memory
+                // so we enqueue in the blocked queue and continue to get the next process
+                printf("BEFORE THE BUDDY ALLOC\n");
+                int process_adress = allocate(message.process.mem_size);
+                printf("this is the process address %d \n", process_adress);
+                printf("AFTER THE BUDDY ALLOC\n");
+                if (process_adress == -1)
+                {
+                    printf("NO ENOUGH SPACE IN MEMORY, TRY AGAINI LATER\n");
+                    enqueue(blocked_processes, message.process);
+                    printf("This is blocked queue: \n");
+                    displayQueue(blocked_processes);
+                }
+                else
+                {
+                    message.process.address = process_adress;
+                    printf("MEMORY ALLOCATED SUCCEFULLY AND THIS IS ITS ADDRESS: %d\n", message.process.address);
+                    enqueue(queue, message.process);
+                    displayQueue(queue);
+                    rdy_processCount++;
+                }
                 total_procesCount++;
             }
 
@@ -191,25 +210,6 @@ int main(int argc, char *argv[])
                     // Check if the process has already been forked
                     if (!next_process.isForked)
                     {
-                        // try to allocate memory for the process
-                        // if it returned -1, this will mean that there's no space for it in the memory
-                        // so we enqueue in the blocked queue and continue to get the next process
-                        printf("BEFORE THE BUDDY ALLOC\n");
-                        bool found = false;
-                        int process_adress = buddy_alloc(next_process.mem_size, tree, 0, 1024, &found, 10);
-                        printf("AFTER THE BUDDY ALLOC\n");
-                        if (process_adress == -1)
-                        {
-                            printf("NO ENOUGH SPACE IN MEMORY, TRY AGAINI LATER\n");
-                            enqueue(blocked_processes, next_process);
-                            printf("This is blocked queue: \n");
-                            displayQueue(blocked_processes);
-                            up(semid2);
-                            continue;
-                        }
-                        next_process.address = process_adress;
-                        printf("MEMORY ALLOCATED SUCCEFULLY AND THIS IS ITS ADDRESS: %d\n", next_process.address);
-
                         // Fork a new process to execute the program
                         pid_t pid = fork();
                         if (pid < 0)
@@ -319,13 +319,6 @@ int main(int argc, char *argv[])
                     // print process stopped state in file
                     int total = process.runtime;
                     fprintf(file, "At time %d Process %d stopped arr %d total %d remain %d wait %d\n", getClk(), process.id, process.arrival_time, total, process.pcb.rem_time, process.pcb.waiting_time);
-                    // check the blocked queue for the first process to be allocated
-                    if (!isEmpty(blocked_processes))
-                    {
-                        printf("WE ARE DEQUEUEING FROM THE BLOCKED AT THE SIGSTOP\n");
-                        Process blocked = dequeue(blocked_processes);
-                        addFront(queue, blocked);
-                    }
                     up(semid2);
                     continue;
                 }
@@ -362,13 +355,30 @@ int main(int argc, char *argv[])
                 displayQueue(finished);
 
                 // remove the allocated memory for the process
-                buddy_free(process.address, tree, process.mem_size);
+                deallocate(process.address);
                 // check the blocked queue for the first process to be allocated
-                if (!isEmpty(blocked_processes))
+                while (!isEmpty(blocked_processes))
                 {
-                    printf("WE ARE DEQUEUEING FROM THE BLOCKED AT THE TERMINATION\n");
-                    Process blocked = dequeue(blocked_processes);
-                    addFront(queue, blocked);
+                    // we check if the there is a place for the first process in the blocked queue
+                    // if yes, we dequeue the process and add it to the ready queue
+
+                    if (checkAllocation(blocked_processes->front->data.mem_size) == 1)
+                    {
+                        printf("WE ARE DEQUEUEING FROM THE BLOCKED AT THE TERMINATED\n");
+                        Process blocked = dequeue(blocked_processes);
+                        enqueue(queue, blocked); // to be removed
+
+                        printf("///////////////////////////// \n");
+                        displayQueue(queue);
+                        printf("BEFORE THE BUDDY ALLOC\n");
+                        int process_adress = allocate(message.process.mem_size);
+                        printf("this is the process address %d \n", process_adress);
+                        printf("AFTER THE BUDDY ALLOC\n");
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
                 up(semid2);
                 continue;
@@ -545,7 +555,6 @@ int main(int argc, char *argv[])
                     // check if the ready queue is not empty , increment the waiting time of each
                     if (!isSRTNEmpty(queue))
                     {
-                        printf("I entered here\n");
                         Process processCalc;
                         for (int i = 0; i < rdy_processCount; i++)
                         {
