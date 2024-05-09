@@ -144,12 +144,7 @@ int main(int argc, char *argv[])
                 perror("Error getting semaphore value");
                 // exit(EXIT_FAILURE);
             }
-            if (msgrcv(msgq1_id, &message, sizeof(struct msgbuff), 7, IPC_NOWAIT) == -1)
-            {
-                // perror("Error receiving message");
-                // exit(EXIT_FAILURE);
-            }
-            else
+            while(!(msgrcv(msgq1_id, &message, sizeof(struct msgbuff), 7, IPC_NOWAIT) == -1))
             {
                 printf("Message recieved successfully from process generator\n");
                 printf("process id: %d \n", message.process.id);
@@ -160,6 +155,14 @@ int main(int argc, char *argv[])
                 rdy_processCount++;
                 total_procesCount++;
             }
+            // if (msgrcv(msgq1_id, &message, sizeof(struct msgbuff), 7, IPC_NOWAIT) == -1)
+            // {
+            //     // perror("Error receiving message");
+            //     // exit(EXIT_FAILURE);
+            // }
+            // else
+            // {
+            // }
 
             if (running_process_id == -1)
             {
@@ -360,17 +363,6 @@ else if (algo == 2) // shortest remaining time next
             if (running_process_id != -1)
             {
                 // check if the ready queue is not empty , increment the waiting time of each
-                if (!isSRTNEmpty(queue))
-                {
-                    printf("I entered here\n");
-                    Process processCalc;
-                    for (int i = 0; i < rdy_processCount; i++)
-                    {
-                        Process processCalc = SRTNdequeue(queue);
-                        processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
-                        SRTNenqueue(queue, processCalc);
-                    }
-                }
                 // decrement the remaining time and check termination
                 running_process.pcb.rem_time--;
                 remMsg.remaining_time = running_process.pcb.rem_time;
@@ -417,17 +409,6 @@ else if (algo == 2) // shortest remaining time next
                     continue;
 
                     // check if the ready queue is not empty , increment the waiting time of each
-                    if (!isSRTNEmpty(queue))
-                    {
-                        printf("I entered here\n");
-                        Process processCalc;
-                        for (int i = 0; i < rdy_processCount; i++)
-                        {
-                            Process processCalc = SRTNdequeue(queue);
-                            processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
-                            SRTNenqueue(queue, processCalc);
-                        }
-                    }
                     pid_t pid = fork();
                     if (pid < 0)
                     {
@@ -496,19 +477,7 @@ else if (algo == 2) // shortest remaining time next
                         fprintf(file, "At time %d Process %d resumed arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, running_process.pcb.waiting_time);
                         fflush(file);
                     }
-
                     // check if the ready queue is not empty , increment the waiting time of each
-                    if (!isSRTNEmpty(queue))
-                    {
-                        printf("I entered here\n");
-                        Process processCalc;
-                        for (int i = 0; i < rdy_processCount; i++)
-                        {
-                            Process processCalc = SRTNdequeue(queue);
-                            processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
-                            SRTNenqueue(queue, processCalc);
-                        }
-                    }
                     pid_t pid = fork();
                     if (pid < 0)
                     {
@@ -617,17 +586,6 @@ else if (algo == 2) // shortest remaining time next
                     fprintf(file, "At time %d Process %d started arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, running_process.pcb.waiting_time);
                     fflush(file);
                     // check if the ready queue is not empty , increment the waiting time of each
-                    if (!isSRTNEmpty(queue))
-                    {
-                        printf("I entered here\n");
-                        Process processCalc;
-                        for (int i = 0; i < rdy_processCount; i++)
-                        {
-                            Process processCalc = SRTNdequeue(queue);
-                            processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
-                            SRTNenqueue(queue, processCalc);
-                        }
-                    }
                     next_process = getSRTNHead(queue);
                     // Fork a new process to execute the program
                     next_process = getSRTNHead(queue);
@@ -688,17 +646,6 @@ else if (algo == 2) // shortest remaining time next
                         fflush(file);
                     }
                     // check if the ready queue is not empty , increment the waiting time of each
-                    if (!isSRTNEmpty(queue))
-                    {
-                        printf("I entered here\n");
-                        Process processCalc;
-                        for (int i = 0; i < rdy_processCount; i++)
-                        {
-                            Process processCalc = SRTNdequeue(queue);
-                            processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
-                            SRTNenqueue(queue, processCalc);
-                        }
-                    }
                     // Fork a new process to execute the program
                     pid_t pid = fork();
                     if (pid < 0)
@@ -781,16 +728,6 @@ else if (algo == 2) // shortest remaining time next
                 {   
                     printf("there is a running process, 3adi geddan no special cases here\n");
                     // check if the ready queue is not empty , increment the waiting time of each
-                    if (!isSRTNEmpty(queue))
-                    {
-                        Process processCalc;
-                        for (int i = 0; i < rdy_processCount; i++)
-                        {
-                            Process processCalc = SRTNdequeue(queue);
-                            processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
-                            SRTNenqueue(queue, processCalc);
-                        }
-                    }
                     // // decrement the remaining time and check termination
                     // running_process.pcb.rem_time--;
                     // remMsg.remaining_time = running_process.pcb.rem_time;
@@ -808,6 +745,31 @@ else if (algo == 2) // shortest remaining time next
                     SRTNenqueue(queue, message.process);
                     displaySRTNQueue(queue);
                     // sleep(2);
+                }
+            }
+            if (!isSRTNEmpty(queue))
+            {
+                if (rdy_processCount > 0)
+                {
+                    Process processCalc;
+                    Queue* waitingQueue;
+                    waitingQueue = createQueue();
+                    for (int i = 0; i < rdy_processCount; i++)
+                    {
+                        Process processCalc = SRTNdequeue(queue);
+                        enqueue(waitingQueue, processCalc);
+                    }
+                    for (int i = 0; i < rdy_processCount; i++)
+                    {
+                        Process processCalc = dequeue(waitingQueue);
+                        processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
+                        enqueue(waitingQueue, processCalc);
+                    }
+                    for (int i = 0; i < rdy_processCount; i++)
+                    {
+                        Process processCalc = dequeue(waitingQueue);
+                        SRTNenqueue(queue, processCalc);
+                    }
                 }
             }
             totalTime++;
@@ -950,10 +912,22 @@ else if (algo == 2) // shortest remaining time next
             if (rdy_processCount > 0)
             {
                 Process processCalc;
+                Queue* waitingQueue;
+                waitingQueue = createQueue();
                 for (int i = 0; i < rdy_processCount; i++)
                 {
                     Process processCalc = HPFdequeue(queue);
+                    enqueue(waitingQueue, processCalc);
+                }
+                for (int i = 0; i < rdy_processCount; i++)
+                {
+                    Process processCalc = dequeue(waitingQueue);
                     processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
+                    enqueue(waitingQueue, processCalc);
+                }
+                for (int i = 0; i < rdy_processCount; i++)
+                {
+                    Process processCalc = dequeue(waitingQueue);
                     HPFenqueue(queue, processCalc);
                 }
             }
