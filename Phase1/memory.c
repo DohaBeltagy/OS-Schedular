@@ -141,14 +141,14 @@ int allocate(int sz)
 
 int checkAllocation(int sz)
 {
-     // Calculate index in free list
+    // Calculate index in free list
     // to search for block if available
     int n = ceil(log(sz) / log(2));
 
     // Block available
     if (free_list[n][0].first != -1)
     {
-       return 1;
+        return 1;
     }
     else
     {
@@ -170,28 +170,55 @@ int checkAllocation(int sz)
         }
         else
         {
-           return 1;
+            return 1;
         }
     }
 }
 
-void deallocate(int start)
-{
+void deallocate(int start) {
     printf("in deallocate \n");
-    printf("size = %d \n", start);
+    printf("start = %d \n", start);
+
     // Find the size of memory block to deallocate
     int size = mp[start].key;
-printf("size = %d \n", size);
-    // Calculate index in free list
-    // to search for proper position
+    printf("size = %d \n", size);
+
+    // Calculate index in free list to search for proper position
     int index = ceil(log(size) / log(2));
-printf("index = %d \n", index);
-    // Add the memory block to free list
-    for (int i = 0; i < 1000; i++)
-    {
+    printf("index = %d \n", index);
+
+    // Buddy merging logic
+    int buddySize = size;
+    while (buddySize <= size && index < size - 1) {
+        int buddyAddress = start ^ buddySize; // Calculate buddy address
+        int buddyFound = 0;
+        for (int i = 0; i < 1000; i++) {
+            if (free_list[index][i].first == buddyAddress && 
+                free_list[index][i].second == buddyAddress + buddySize - 1) {
+                buddyFound = 1;
+                // Remove buddy from free_list
+                for (int j = i; j < 999; j++) {
+                    free_list[index][j] = free_list[index][j + 1];
+                }
+                break;
+            }
+        }
+
+        if (buddyFound==1) {
+            // Merge buddies
+            start = fmin(start, buddyAddress);
+            size *= 2;
+            index++;
+            buddySize *= 2;
+        } else {
+            break; // No buddy found, stop merging
+        }
+    }
+
+    // Add the merged block (or original block if no merging) to free_list
+    for (int i = 0; i < 1000; i++) {
         printf("loop iteration = %d \n", i);
-        if (free_list[index][i].first == -1)
-        {
+        if (free_list[index][i].first == -1) {
             printf("free_list[index][i].first == -1 \n");
             free_list[index][i].first = start;
             free_list[index][i].second = start + size - 1;
