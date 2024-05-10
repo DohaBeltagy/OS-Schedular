@@ -163,12 +163,7 @@ int main(int argc, char *argv[])
                 perror("Error getting semaphore value");
                 // exit(EXIT_FAILURE);
             }
-            if (msgrcv(msgq1_id, &message, sizeof(struct msgbuff), 7, IPC_NOWAIT) == -1)
-            {
-                // perror("Error receiving message");
-                // exit(EXIT_FAILURE);
-            }
-            else
+            while(!(msgrcv(msgq1_id, &message, sizeof(struct msgbuff), 7, IPC_NOWAIT) == -1))
             {
                 printf("Message recieved successfully from process generator\n");
                 printf("process id: %d \n", message.process.id);
@@ -202,7 +197,6 @@ int main(int argc, char *argv[])
                     fflush(mem_file);
                 }
             }
-
             if (running_process_id == -1)
             {
                 // No process is running, try to dequeue from the queue
@@ -936,10 +930,7 @@ int main(int argc, char *argv[])
                 // exit(EXIT_FAILURE);
             }
             // Receive processes from the message queue
-            if (msgrcv(msgq1_id, &message, sizeof(struct msgbuff), 7, IPC_NOWAIT) == -1)
-            {
-            }
-            else // there was a process received at this second
+            while(!(msgrcv(msgq1_id, &message, sizeof(struct msgbuff), 7, IPC_NOWAIT) == -1))
             {
                 printf("Message recieved successfully from process\n");
                 printf("process id: %d \n", message.process.id);
