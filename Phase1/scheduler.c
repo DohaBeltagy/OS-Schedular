@@ -173,7 +173,7 @@ int main(int argc, char *argv[])
                 printf("Message recieved successfully from process generator\n");
                 printf("process id: %d \n", message.process.id);
                 message.process.pcb.state = 0;
-                message.process.pcb.waiting_time = 1;
+                message.process.pcb.waiting_time = 0;
                 // try to allocate memory for the process
                 // if it returned -1, this will mean that there's no space for it in the memory
                 // so we enqueue in the blocked queue and continue to get the next process
@@ -194,6 +194,7 @@ int main(int argc, char *argv[])
                     message.process.address = process_adress;
                     printf("MEMORY ALLOCATED SUCCEFULLY AND THIS IS ITS ADDRESS: %d\n", message.process.address);
                     enqueue(queue, message.process); // enqueue in ready queue
+                    rdy_processCount++;
                     displayQueue(queue);
                     int n = ceil(log(message.process.mem_size) / log(2));
                     int final_size = pow(2,n);
@@ -381,7 +382,10 @@ int main(int argc, char *argv[])
                 }
                 up(semid2);
                 continue;
-            }
+            }          
+            totalTime++;
+            displayQueue(queue);
+            printf("before up\n");
             if (rdy_processCount > 0)
             {
                 Process processCalc;
@@ -400,10 +404,7 @@ int main(int argc, char *argv[])
                     processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
                     enqueue(blocked_processes, processCalc);
                 }   
-            }              
-            totalTime++;
-            displayQueue(queue);
-            printf("before up\n");
+            }    
             up(semid3);
             // sleep(1);
         }
@@ -1124,7 +1125,16 @@ int main(int argc, char *argv[])
                     Process processCalc = dequeue(waitingQueue);
                     HPFenqueue(queue, processCalc);
                 }
-            }        
+            }
+            if (blk_processCount > 0)
+            {
+                for (int i = 0; i < blk_processCount; i++)
+                {
+                    Process processCalc = dequeue(blocked_processes);
+                    processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
+                    enqueue(blocked_processes, processCalc);
+                }   
+            }            
             totalTime++;
             up(semid3);
         }
