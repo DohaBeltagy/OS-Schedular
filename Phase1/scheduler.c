@@ -151,6 +151,7 @@ int main(int argc, char *argv[])
         int remaining_quantum = quanta;
         int running_process_id = -1;
         Process process;
+        Process blocked;
 
         // Receive process objects from the message queue
         while (finishedProcesses < processNum)
@@ -358,15 +359,16 @@ int main(int argc, char *argv[])
 
                     if (checkAllocation(blocked_processes->front->data.mem_size) == 1)
                     {
-                        Process blocked = dequeue(blocked_processes);
+                        blocked = dequeue(blocked_processes);
+                        printf("BEFORE THE BUDDY ALLOC\n");
+                        int process_adress = allocate(blocked.mem_size);
+                        blocked.address = process_adress;
+                        printf("this is the process address %d \n", process_adress);
+                        printf("AFTER THE BUDDY ALLOC\n");
                         enqueue(queue, blocked); // to be removed
                         rdy_processCount++;
                         displayQueue(queue);
                         blk_processCount--;
-                        printf("BEFORE THE BUDDY ALLOC\n");
-                        int process_adress = allocate(message.process.mem_size);
-                        printf("this is the process address %d \n", process_adress);
-                        printf("AFTER THE BUDDY ALLOC\n");
                         int n = ceil(log(blocked.mem_size) / log(2));
                         int final_size = pow(2,n);
                         fprintf(mem_file,"At time %d allocated %d bytes for process %d from %d to %d\n",getClk(),blocked.mem_size,blocked.id,blocked.address, blocked.address+final_size-1);
@@ -415,6 +417,7 @@ int main(int argc, char *argv[])
         Process running_process;
         Process next_process;
         running_process.isForked = false;
+        Process blocked;
 
         // Receive process objects from the message queue
         while (finishedProcesses < processNum)
@@ -486,15 +489,17 @@ int main(int argc, char *argv[])
                     
                         if (checkAllocation(blocked_processes->front->data.mem_size) == 1)
                         {
-                            Process blocked = dequeue(blocked_processes);
+                            blocked = dequeue(blocked_processes);
                             blk_processCount--;
+                            printf("blocked process dequeued: %d\n", blocked.id);
+                            printf("BEFORE THE BUDDY ALLOC\n");
+                            int process_adress = allocate(blocked.mem_size);
+                            blocked.address = process_adress;
+                            printf("this is the process address %d \n", process_adress);
+                            printf("AFTER THE BUDDY ALLOC\n");
                             SRTNenqueue(queue, blocked); // to be removed
                             rdy_processCount++;
                             displaySRTNQueue(queue);
-                            printf("BEFORE THE BUDDY ALLOC\n");
-                            int process_adress = allocate(blocked.mem_size);
-                            printf("this is the process address %d \n", process_adress);
-                            printf("AFTER THE BUDDY ALLOC\n");
                             int n = ceil(log(blocked.mem_size) / log(2));
                             int final_size = pow(2,n);
                             fprintf(mem_file,"At time %d allocated %d bytes for process %d from %d to %d\n",getClk(),blocked.mem_size,blocked.id,blocked.address, blocked.address+final_size-1);
@@ -1076,12 +1081,12 @@ int main(int argc, char *argv[])
                         blocked = dequeue(blocked_processes);
                         blk_processCount--;
                         printf("blocked process dequeued: %d\n", blocked.id);
-                        HPFenqueue(queue,blocked);
-                        rdy_processCount++;
-                        displayHPFQueue(queue);
                         printf("BEFORE THE BUDDY ALLOC\n");
                         int process_adress = allocate(blocked.mem_size);
                         blocked.address = process_adress;
+                        HPFenqueue(queue,blocked);
+                        rdy_processCount++;
+                        displayHPFQueue(queue);
                         printf("blocked process address: %d\n",blocked.address);
                         printf("this is the process address %d \n", process_adress);
                         printf("AFTER THE BUDDY ALLOC\n");
