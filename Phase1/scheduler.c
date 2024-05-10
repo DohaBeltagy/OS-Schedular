@@ -72,6 +72,7 @@ int main(int argc, char *argv[])
     // a blocked queue to hold the processes that don't have a place in memory
     Queue *blocked_processes;
     blocked_processes = createQueue();
+    int blk_processCount = 0;
 
     initialize(1024);
     printf("after initialize \n");
@@ -173,6 +174,7 @@ int main(int argc, char *argv[])
                 {
                     printf("NO ENOUGH SPACE IN MEMORY, TRY AGAIN LATER\n");
                     enqueue(blocked_processes, message.process);
+                    blk_processCount++;
                     printf("This is blocked queue: \n");
                     displayQueue(blocked_processes);
                 }
@@ -194,16 +196,6 @@ int main(int argc, char *argv[])
                     // Dequeue the next process
                     Process next_process = dequeue(queue);
                     rdy_processCount--;
-                    if (rdy_processCount > 0)
-                    {
-                        Process processCalc;
-                        for (int i = 0; i < rdy_processCount; i++)
-                        {
-                            Process processCalc = dequeue(queue);
-                            processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
-                            enqueue(queue, processCalc);
-                        }
-                    }
 
                     // Check if the process has already been forked
                     if (!next_process.isForked)
@@ -282,19 +274,6 @@ int main(int argc, char *argv[])
                 {
                     remaining_quantum--;
                     process.pcb.rem_time = process.pcb.rem_time - 1;
-                    if (rdy_processCount > 0)
-                    {
-                        Process processCalc;
-                        // for each process in the ready queue
-                        // dequeue the process and increase its waiting time
-                        // then enqueue the process again.
-                        for (int i = 0; i < rdy_processCount; i++)
-                        {
-                            Process processCalc = dequeue(queue);
-                            processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
-                            enqueue(queue, processCalc);
-                        }
-                    }
                     remMsg.remaining_time = process.pcb.rem_time;
                     remMsg.mtype = 36;
                     if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
@@ -366,6 +345,7 @@ int main(int argc, char *argv[])
                         enqueue(queue, blocked); // to be removed
                         rdy_processCount++;
                         displayQueue(queue);
+                        blk_processCount--;
                         printf("BEFORE THE BUDDY ALLOC\n");
                         int process_adress = allocate(message.process.mem_size);
                         printf("this is the process address %d \n", process_adress);
@@ -379,6 +359,25 @@ int main(int argc, char *argv[])
                 up(semid2);
                 continue;
             }
+            if (rdy_processCount > 0)
+            {
+                Process processCalc;
+                for (int i = 0; i < rdy_processCount; i++)
+                {
+                    Process processCalc = dequeue(queue);
+                    processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
+                    enqueue(queue, processCalc);
+                }
+            }
+            if (blk_processCount > 0)
+            {
+                for (int i = 0; i < blk_processCount; i++)
+                {
+                    Process processCalc = dequeue(blocked_processes);
+                    processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
+                    enqueue(blocked_processes, processCalc);
+                }   
+            }              
             totalTime++;
             displayQueue(queue);
             printf("before up\n");
@@ -395,7 +394,6 @@ int main(int argc, char *argv[])
         Process running_process;
         Process next_process;
         running_process.isForked = false;
-        next_process.isForked - false;
 
         // Receive process objects from the message queue
         while (finishedProcesses < processNum)
@@ -411,17 +409,6 @@ int main(int argc, char *argv[])
             if (running_process_id != -1)
             {
                 // check if the ready queue is not empty , increment the waiting time of each
-                if (!isSRTNEmpty(queue))
-                {
-                    printf("I entered here\n");
-                    Process processCalc;
-                    for (int i = 0; i < rdy_processCount; i++)
-                    {
-                        Process processCalc = SRTNdequeue(queue);
-                        processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
-                        SRTNenqueue(queue, processCalc);
-                    }
-                }
                 // decrement the remaining time and check termination
                 running_process.pcb.rem_time--;
                 remMsg.remaining_time = running_process.pcb.rem_time;
@@ -471,10 +458,11 @@ int main(int argc, char *argv[])
                     {
                         // we check if the there is a place for the first process in the blocked queue
                         // if yes, we dequeue the process and add it to the ready queue
-
+                    
                         if (checkAllocation(blocked_processes->front->data.mem_size) == 1)
                         {
                             Process blocked = dequeue(blocked_processes);
+                            blk_processCount--;
                             SRTNenqueue(queue, blocked); // to be removed
                             rdy_processCount++;
                             displaySRTNQueue(queue);
@@ -492,17 +480,6 @@ int main(int argc, char *argv[])
                     continue;
 
                     // check if the ready queue is not empty , increment the waiting time of each
-                    if (!isSRTNEmpty(queue))
-                    {
-                        printf("I entered here\n");
-                        Process processCalc;
-                        for (int i = 0; i < rdy_processCount; i++)
-                        {
-                            Process processCalc = SRTNdequeue(queue);
-                            processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
-                            SRTNenqueue(queue, processCalc);
-                        }
-                    }
                     pid_t pid = fork();
                     if (pid < 0)
                     {
@@ -607,16 +584,6 @@ int main(int argc, char *argv[])
                     }
 
                     // check if the ready queue is not empty , increment the waiting time of each
-                    if (!isSRTNEmpty(queue))
-                    {
-                        Process processCalc;
-                        for (int i = 0; i < rdy_processCount; i++)
-                        {
-                            Process processCalc = SRTNdequeue(queue);
-                            processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
-                            SRTNenqueue(queue, processCalc);
-                        }
-                    }
                 }
             }
             else // there was a process received at this second
@@ -638,8 +605,11 @@ int main(int argc, char *argv[])
                 {
                     printf("NO ENOUGH SPACE IN MEMORY, TRY AGAIN LATER\n");
                     enqueue(blocked_processes, message.process);
+                    blk_processCount++;
                     printf("This is blocked queue: \n");
                     displayQueue(blocked_processes);
+                    up(semid2);
+                    continue;                  
                 }
                 else
                 {
@@ -709,17 +679,6 @@ int main(int argc, char *argv[])
                         fprintf(file, "At time %d Process %d started arr %d total %d remain %d wait %d\n", getClk(), running_process.id, running_process.arrival_time, total, running_process.pcb.rem_time, running_process.pcb.waiting_time);
                         fflush(file);
                         // check if the ready queue is not empty , increment the waiting time of each
-                        if (!isSRTNEmpty(queue))
-                        {
-                            printf("I entered here\n");
-                            Process processCalc;
-                            for (int i = 0; i < rdy_processCount; i++)
-                            {
-                                Process processCalc = SRTNdequeue(queue);
-                                processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
-                                SRTNenqueue(queue, processCalc);
-                            }
-                        }
                         next_process = getSRTNHead(queue);
                         // Fork a new process to execute the program
                         next_process = getSRTNHead(queue);
@@ -812,17 +771,6 @@ int main(int argc, char *argv[])
                             fflush(file);
                         }
                         // check if the ready queue is not empty , increment the waiting time of each
-                        if (!isSRTNEmpty(queue))
-                        {
-                            printf("I entered here\n");
-                            Process processCalc;
-                            for (int i = 0; i < rdy_processCount; i++)
-                            {
-                                Process processCalc = SRTNdequeue(queue);
-                                processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
-                                SRTNenqueue(queue, processCalc);
-                            }
-                        }
                         displaySRTNQueue(queue);
                     }
                     else if (running_process_id == -1 && getSRTNHead(queue).pcb.rem_time > message.process.pcb.rem_time)
@@ -873,16 +821,6 @@ int main(int argc, char *argv[])
                     {
                         printf("there is a running process, 3adi geddan no special cases here\n");
                         // check if the ready queue is not empty , increment the waiting time of each
-                        if (!isSRTNEmpty(queue))
-                        {
-                            Process processCalc;
-                            for (int i = 0; i < rdy_processCount; i++)
-                            {
-                                Process processCalc = SRTNdequeue(queue);
-                                processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
-                                SRTNenqueue(queue, processCalc);
-                            }
-                        }
                         // // decrement the remaining time and check termination
                         // running_process.pcb.rem_time--;
                         // remMsg.remaining_time = running_process.pcb.rem_time;
@@ -903,6 +841,37 @@ int main(int argc, char *argv[])
                     }
                 }
             }
+            if (rdy_processCount > 0)
+            {
+                Process processCalc;
+                Queue* waitingQueue;
+                waitingQueue = createQueue();
+                for (int i = 0; i < rdy_processCount; i++)
+                {
+                    Process processCalc = SRTNdequeue(queue);
+                    enqueue(waitingQueue, processCalc);
+                }
+                for (int i = 0; i < rdy_processCount; i++)
+                {
+                    Process processCalc = dequeue(waitingQueue);
+                    processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
+                    enqueue(waitingQueue, processCalc);
+                }
+                for (int i = 0; i < rdy_processCount; i++)
+                {
+                    Process processCalc = dequeue(waitingQueue);
+                    SRTNenqueue(queue, processCalc);
+                }
+            }
+            if (blk_processCount > 0)
+            {
+                for (int i = 0; i < blk_processCount; i++)
+                {
+                    Process processCalc = dequeue(blocked_processes);
+                    processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
+                    enqueue(blocked_processes, processCalc);
+                }   
+            }    
             totalTime++;
             up(semid3);
             sleep(1);
@@ -946,6 +915,7 @@ int main(int argc, char *argv[])
                 {
                     printf("NO ENOUGH SPACE IN MEMORY, TRY AGAIN LATER\n");
                     enqueue(blocked_processes, message.process);
+                    blk_processCount++;
                     printf("This is blocked queue: \n");
                     displayQueue(blocked_processes);
                 }
@@ -967,16 +937,6 @@ int main(int argc, char *argv[])
                     running_process = next_process;
                     running_process_id = running_process.id;
                     rdy_processCount--;
-                    if (rdy_processCount > 0)
-                    {
-                        Process processCalc;
-                        for (int i = 0; i < rdy_processCount; i++)
-                        {
-                            Process processCalc = HPFdequeue(queue);
-                            processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
-                            HPFenqueue(queue, processCalc);
-                        }
-                    }
                     pid_t pid = fork();
                     if (pid < 0)
                     {
@@ -1019,19 +979,6 @@ int main(int argc, char *argv[])
             else
             {
                 running_process.pcb.rem_time = running_process.pcb.rem_time - 1;
-                if (rdy_processCount > 0)
-                {
-                    Process processCalc;
-                    // for each process in the ready queue
-                    // dequeue the process and increase its waiting time
-                    // then enqueue the process again.
-                    for (int i = 0; i < rdy_processCount; i++)
-                    {
-                        Process processCalc = HPFdequeue(queue);
-                        processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
-                        HPFenqueue(queue, processCalc);
-                    }
-                }
                 remMsg.remaining_time = running_process.pcb.rem_time;
                 remMsg.mtype = 36;
                 if (msgsnd(msgid2, &remMsg, sizeof(remMsg) - sizeof(long), 0) == -1)
@@ -1085,6 +1032,7 @@ int main(int argc, char *argv[])
                     if (checkAllocation(blocked_processes->front->data.mem_size) == 1)
                     {
                         Process blocked = dequeue(blocked_processes);
+                        blk_processCount--;
                         HPFenqueue(queue,blocked);
                         rdy_processCount++;
                         displayHPFQueue(queue);
@@ -1101,6 +1049,28 @@ int main(int argc, char *argv[])
                 up(semid2);
                 continue;
             }
+            if (rdy_processCount > 0)
+            {
+                Process processCalc;
+                Queue* waitingQueue;
+                waitingQueue = createQueue();
+                for (int i = 0; i < rdy_processCount; i++)
+                {
+                    Process processCalc = HPFdequeue(queue);
+                    enqueue(waitingQueue, processCalc);
+                }
+                for (int i = 0; i < rdy_processCount; i++)
+                {
+                    Process processCalc = dequeue(waitingQueue);
+                    processCalc.pcb.waiting_time = processCalc.pcb.waiting_time + 1;
+                    enqueue(waitingQueue, processCalc);
+                }
+                for (int i = 0; i < rdy_processCount; i++)
+                {
+                    Process processCalc = dequeue(waitingQueue);
+                    HPFenqueue(queue, processCalc);
+                }
+            }        
             totalTime++;
             up(semid3);
         }
