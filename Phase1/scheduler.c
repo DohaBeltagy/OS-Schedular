@@ -132,6 +132,16 @@ int main(int argc, char *argv[])
     fflush(file);
     int finishedProcesses = 0;
 
+    FILE * mem_file = fopen("memory.log","w");
+    if (mem_file == NULL)
+    {
+        perror("Error opening file");
+        exit(EXIT_FAILURE);
+    }
+    // Print how log works
+    fprintf(mem_file, "#At time x allocated y bytes for process z from i to j\n");
+    fflush(mem_file);
+
     // Round Robin Algorithm
     if (algo == 1)
     {
@@ -184,7 +194,10 @@ int main(int argc, char *argv[])
                     printf("MEMORY ALLOCATED SUCCEFULLY AND THIS IS ITS ADDRESS: %d\n", message.process.address);
                     enqueue(queue, message.process); // enqueue in ready queue
                     displayQueue(queue);
-                    rdy_processCount++;
+                    int n = ceil(log(message.process.mem_size) / log(2));
+                    int final_size = pow(2,n);
+                    fprintf(mem_file,"At time %d allocated %d bytes for process %d from %d to %d\n",getClk(),message.process.mem_size,message.process.id,message.process.address,message.process.address+final_size-1);
+                    fflush(mem_file);
                 }
             }
 
@@ -333,6 +346,10 @@ int main(int argc, char *argv[])
 
                 // remove the allocated memory for the process
                 deallocate(process.address);
+                int n = ceil(log(process.mem_size) / log(2));
+                int final_size = pow(2,n);
+                fprintf(mem_file,"At time %d freed %d bytes from process %d from %d to %d\n", getClk(), process.mem_size, process.id,process.address, process.address+final_size-1);
+                fflush(mem_file);
                 // check the blocked queue for the first process to be allocated
                 while (!isEmpty(blocked_processes))
                 {
@@ -350,6 +367,10 @@ int main(int argc, char *argv[])
                         int process_adress = allocate(message.process.mem_size);
                         printf("this is the process address %d \n", process_adress);
                         printf("AFTER THE BUDDY ALLOC\n");
+                        int n = ceil(log(blocked.mem_size) / log(2));
+                        int final_size = pow(2,n);
+                        fprintf(mem_file,"At time %d allocated %d bytes for process %d from %d to %d\n",getClk(),blocked.mem_size,blocked.id,blocked.address, blocked.address+final_size-1);
+                        fflush(mem_file);
                     }
                     else
                     {
@@ -453,6 +474,10 @@ int main(int argc, char *argv[])
                     running_process_id = -1;
                     // remove the allocated memory for the process
                     deallocate(running_process.address);
+                    int n = ceil(log(running_process.mem_size) / log(2));
+                    int final_size = pow(2,n);
+                    fprintf(mem_file,"At time %d freed %d bytes from process %d from %d to %d\n", getClk(), running_process.mem_size, running_process.id,running_process.address,running_process.address+final_size-1);
+                    fflush(mem_file);
                     // check the blocked queue for the first process to be allocated
                     while (!isEmpty(blocked_processes))
                     {
@@ -467,9 +492,13 @@ int main(int argc, char *argv[])
                             rdy_processCount++;
                             displaySRTNQueue(queue);
                             printf("BEFORE THE BUDDY ALLOC\n");
-                            int process_adress = allocate(message.process.mem_size);
+                            int process_adress = allocate(blocked.mem_size);
                             printf("this is the process address %d \n", process_adress);
                             printf("AFTER THE BUDDY ALLOC\n");
+                            int n = ceil(log(blocked.mem_size) / log(2));
+                            int final_size = pow(2,n);
+                            fprintf(mem_file,"At time %d allocated %d bytes for process %d from %d to %d\n",getClk(),blocked.mem_size,blocked.id,blocked.address, blocked.address+final_size-1);
+                            fflush(mem_file);
                         }
                         else
                         {
@@ -615,7 +644,10 @@ int main(int argc, char *argv[])
                 {
                     message.process.address = process_adress;
                     printf("MEMORY ALLOCATED SUCCEFULLY AND THIS IS ITS ADDRESS: %d\n", message.process.address);
-
+                    int n = ceil(log(message.process.mem_size) / log(2));
+                    int final_size = pow(2,n);
+                    fprintf(mem_file,"At time %d allocated %d bytes for process %d from %d to %d\n",getClk(),message.process.mem_size,message.process.id,message.process.address,message.process.address+final_size-1);
+                    fflush(mem_file);
                     // if there was no running process and no processes in the ready queue
                     if (running_process_id == -1 && isSRTNEmpty(queue))
                     {
@@ -885,6 +917,7 @@ int main(int argc, char *argv[])
         int running_process_id = -1;
         Process running_process;
         Process next_process;
+        Process blocked;
 
         // Receive process objects from the message queue
         while (finishedProcesses < processNum)
@@ -926,6 +959,10 @@ int main(int argc, char *argv[])
                     HPFenqueue(queue, message.process);
                     displayHPFQueue(queue);
                     rdy_processCount++;
+                    int n = ceil(log(message.process.mem_size) / log(2));
+                    int final_size = pow(2,n);
+                    fprintf(mem_file,"At time %d allocated %d bytes for process %d from %d to %d\n",getClk(),message.process.mem_size,message.process.id,message.process.address, message.process.address+final_size-1);
+                    fflush(mem_file);
                 }
             }
             // if there is no process running
@@ -1023,6 +1060,11 @@ int main(int argc, char *argv[])
                 running_process_id = -1;
                  // remove the allocated memory for the process
                 deallocate(running_process.address);
+                printf("the runnin gprocess anddress: %d\n", running_process.address);
+                int n = ceil(log(running_process.mem_size) / log(2));
+                int final_size = pow(2,n);
+                fprintf(mem_file,"At time %d freed %d bytes from process %d from %d to %d\n", getClk(), running_process.mem_size, running_process.id,running_process.address,running_process.address+final_size-1);
+                fflush(mem_file);
                 // check the blocked queue for the first process to be allocated
                 while (!isEmpty(blocked_processes))
                 {
@@ -1031,15 +1073,22 @@ int main(int argc, char *argv[])
 
                     if (checkAllocation(blocked_processes->front->data.mem_size) == 1)
                     {
-                        Process blocked = dequeue(blocked_processes);
+                        blocked = dequeue(blocked_processes);
                         blk_processCount--;
+                        printf("blocked process dequeued: %d\n", blocked.id);
                         HPFenqueue(queue,blocked);
                         rdy_processCount++;
                         displayHPFQueue(queue);
                         printf("BEFORE THE BUDDY ALLOC\n");
-                        int process_adress = allocate(message.process.mem_size);
+                        int process_adress = allocate(blocked.mem_size);
+                        blocked.address = process_adress;
+                        printf("blocked process address: %d\n",blocked.address);
                         printf("this is the process address %d \n", process_adress);
                         printf("AFTER THE BUDDY ALLOC\n");
+                        int n = ceil(log(blocked.mem_size) / log(2));
+                        int final_size = pow(2,n);
+                        fprintf(mem_file,"At time %d allocated %d bytes for process %d from %d to %d\n",getClk(),blocked.mem_size,blocked.id,process_adress,process_adress+final_size-1);
+                        fflush(mem_file);
                     }
                     else
                     {
@@ -1076,6 +1125,7 @@ int main(int argc, char *argv[])
         }
     }
     fclose(file);
+    fclose(mem_file);
     // creates perf file
     perf_file = fopen("perf.txt", "w");
     if (file == NULL)
